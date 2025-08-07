@@ -7,7 +7,8 @@ import scala.util.Success
 object Main {
 
   val days: List[Day] = List(
-    Day_1
+    Day_1,
+    Day_2
   )
 
   def main(args: Array[String]): Unit =
