@@ -16,7 +16,7 @@ object Main {
       runDay(day)
     } else if (args.length == 1) {
 
-      if args(0) == "all" then runDays(days)
+      if args(0) == "all" then days.foreach(runDay(_))
       else
         Try(args(0).toInt).map(i => days(i - 1)) match
           case Failure(exception) =>
@@ -26,9 +26,6 @@ object Main {
     } else {
       println("Unknown argument")
     }
-
-  private def runDays(days: List[Day]) =
-    days.foreach(runDay(_))
 
   private def runDay(d: Day) =
     printGreen(
