@@ -57,7 +57,10 @@ case object Day_2 extends Day {
     }
     println(s"There are $numSafeReports safe reports")
 
-  override def part1 = ()
+  override def part1 =
+    val data = Utils.readDailyResourceIntoString(2)
+    val numSafe = toLines(data).map(line => isSafe(toInts(line))).count(b => b)
+    println(numSafe)
 
   override def part2 = ()
 

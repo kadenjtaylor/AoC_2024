@@ -49,7 +49,7 @@ case object Day_1 extends Day {
   // =============================================================== //
 
   override def example: Unit = {
-    val sum = calculateSortedSumOfDiffs(splitIntoNumberLists(exampleData))
+    val sum = calculateSortedSumOfDiffs(splitIntoNumberLists(exampleData), true)
     println(sum)
   }
 
