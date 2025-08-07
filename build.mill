@@ -1,0 +1,15 @@
+//| mill-version: 1.0.3
+
+import mill._
+import scalalib._
+import mill.api.Task.Simple
+
+object problems extends ScalaModule {
+  def scalaVersion = "3.7.2"
+
+  override def mvnDeps: Simple[Seq[Dep]] =
+    Seq(
+        mvn"com.lihaoyi::os-lib::0.11.5"
+    )
+
+}
