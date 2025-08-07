@@ -4,7 +4,7 @@ import model.Day
 import scala.util.Try
 import model.Utils
 
-case class Day1() extends Day {
+case object Day_1 extends Day {
 
   private def exampleData: String = """3   4
                               |4   3
@@ -39,6 +39,13 @@ case class Day1() extends Day {
     })
     sum
 
+  // I was worried this wouldn't run as efficiently as I needed
+  // The alternative idea was more imperative and involved pre-sorting
+  // the occurrences list and memoizing the counts I'd collected so far
+  // Luckily, the list is only 1000 items long, and scala is plenty fast
+  private def countOccurrences(keys: List[Int], occurrences: List[Int]) =
+    keys.map(k => (k, occurrences.filter(_ == k).length * k)).toMap
+
   // =============================================================== //
 
   override def example: Unit = {
@@ -51,13 +58,10 @@ case class Day1() extends Day {
     val sum = calculateSortedSumOfDiffs(splitIntoNumberLists(s))
     println(sum)
 
-  private def simpleWay(keys: List[Int], occurrences: List[Int]) =
-    keys.map(k => (k, occurrences.filter(_ == k).length * k)).toMap
-
   override def part2 =
     val s = Utils.readDailyResourceIntoString(1)
     val (l1, l2) = splitIntoNumberLists(s)
-    val counts = simpleWay(l1, l2)
+    val counts = countOccurrences(l1, l2)
     val sum = counts.values.sum
     println(sum)
 

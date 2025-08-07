@@ -1,29 +1,22 @@
-# Example mill project that compiles using Scala 3
+# Advent of Code 2024
+
+## Wait, isn't this being started in August 2025? 
+
+Sure is :) I was planning/executing a move at the time, and I'm now starting the job search again. This is a way for me to make sure my skills are still sharp while I do all the applying, interviewing, etc. Plus, I do love these puzzles.
 
 ## Usage
 
-This is a normal mill project. You can compile code with `mill examples.compile` and run it
-with `mill examples.run`, `mill -i examples.console` will start a Scala 3 REPL.
-
-### IDE support
-
-It's recommended to either use [Metals](https://scalameta.org/metals/) with the
-editor of your choice or [the Scala Plugin for
-IntelliJ](https://blog.jetbrains.com/scala/).
-
-## Using Scala 3 in an existing project
-
-### build.sc
-
-```scala
-def scalaVersion = "3.7.2"
+```bash
+# runs last day in the list
+$ mill problems.run 
 ```
 
-### Getting your project to compile with Scala 3
+```bash
+ # runs all days in order
+$ mill problems.run all
+```
 
-For help with porting an existing Scala 2 project to Scala 3, see the
-[Scala 3 migration guide](https://docs.scala-lang.org/scala3/guides/migration/compatibility-intro.html).
-
-## Need help?
-
-https://www.scala-lang.org/community/ has links.
+```bash
+ # runs day #i (index i + 1)
+$ mill problems.run {i}
+```
