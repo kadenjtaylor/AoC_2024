@@ -22,11 +22,14 @@ case class Day1() extends Day {
     } yield (lists._1.appended(n1), lists._2.appended(n2))
     nextStep.get
 
+  private def splitIntoNumberLists(s: String) =
+    s.split("\n").foldLeft((List(), List()))(append)
+
   private def calculateSortedSumOfDiffs(
-      data: String,
+      numberLists: (List[Int], List[Int]),
       verbose: Boolean = false
   ) =
-    val (l1, l2) = data.split("\n").foldLeft((List(), List()))(append)
+    val (l1, l2) = numberLists
     val runway = l1.sorted.zip(l2.sorted)
     var sum = 0
     runway.foreach((n1, n2) => {
@@ -36,15 +39,26 @@ case class Day1() extends Day {
     })
     sum
 
+  // =============================================================== //
+
   override def example: Unit = {
-    val sum = calculateSortedSumOfDiffs(exampleData)
+    val sum = calculateSortedSumOfDiffs(splitIntoNumberLists(exampleData))
     println(sum)
   }
 
   override def part1 =
     val s = Utils.readDailyResourceIntoString(1)
-    val sum = calculateSortedSumOfDiffs(s)
+    val sum = calculateSortedSumOfDiffs(splitIntoNumberLists(s))
     println(sum)
 
-  override def part2 = ()
+  private def simpleWay(keys: List[Int], occurrences: List[Int]) =
+    keys.map(k => (k, occurrences.filter(_ == k).length * k)).toMap
+
+  override def part2 =
+    val s = Utils.readDailyResourceIntoString(1)
+    val (l1, l2) = splitIntoNumberLists(s)
+    val counts = simpleWay(l1, l2)
+    val sum = counts.values.sum
+    println(sum)
+
 }
