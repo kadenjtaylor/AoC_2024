@@ -22,21 +22,29 @@ case class Day1() extends Day {
     } yield (lists._1.appended(n1), lists._2.appended(n2))
     nextStep.get
 
-  override def example: Unit = {
-    val (l1, l2) = exampleData.split("\n").foldLeft((List(), List()))(append)
+  private def calculateSortedSumOfDiffs(
+      data: String,
+      verbose: Boolean = false
+  ) =
+    val (l1, l2) = data.split("\n").foldLeft((List(), List()))(append)
     val runway = l1.sorted.zip(l2.sorted)
     var sum = 0
     runway.foreach((n1, n2) => {
       val diff = Math.abs(n2 - n1)
-      println(s"$n1, $n2 => $diff")
+      if verbose then println(s"$n1, $n2 => $diff") else ()
       sum += diff
     })
-    println(s"Total Diff: $sum")
+    sum
+
+  override def example: Unit = {
+    val sum = calculateSortedSumOfDiffs(exampleData)
+    println(sum)
   }
 
   override def part1 =
     val s = Utils.readDailyResourceIntoString(1)
-    println(s)
+    val sum = calculateSortedSumOfDiffs(s)
+    println(sum)
 
   override def part2 = ()
 }
