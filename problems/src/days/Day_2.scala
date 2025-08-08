@@ -47,11 +47,24 @@ case object Day_2 extends Day {
 
   // =============================================================== //
 
+  private def createOptions(report: Array[Int]) =
+    Range(1, report.length + 1)
+      .map(i => report.slice(0, i - 1) ++ report.slice(i, report.length))
+
+  private def dampenedIsSafe(report: Array[Int]) =
+    if isSafe(report) then true
+    else
+      createOptions(report)
+        .map(arr => isSafe(arr))
+        .reduce(_ || _)
+
+  // =============================================================== //
+
   override def example: Unit =
     var numSafeReports = 0
     toLines(exampleData).foreach { line =>
       val report = toInts(line)
-      val safe = isSafe(report)
+      val safe = dampenedIsSafe(report)
       println(report.mkString(" ") + s", Safe: ${{ safe }}")
       if safe then numSafeReports += 1 else ()
     }
@@ -62,6 +75,10 @@ case object Day_2 extends Day {
     val numSafe = toLines(data).map(line => isSafe(toInts(line))).count(b => b)
     println(numSafe)
 
-  override def part2 = ()
+  override def part2 =
+    val data = Utils.readDailyResourceIntoString(2)
+    val reports = toLines(data).map(toInts(_))
+    val numSafe = reports.map(dampenedIsSafe(_)).count(b => b)
+    println(numSafe)
 
 }
