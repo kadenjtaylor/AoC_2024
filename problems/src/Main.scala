@@ -8,7 +8,8 @@ object Main {
 
   val days: List[Day] = List(
     Day_1,
-    Day_2
+    Day_2,
+    Day_3
   )
 
   def main(args: Array[String]): Unit =
