@@ -32,19 +32,16 @@ case object Day_4 extends Day {
       phrase: String,
       dir: Direction
   ): Option[WordSearchResult] = {
-    val pattern = phrase
-      .toCharArray()
-      .zipWithIndex
-    val advanceFn: (Char, Int) => Option[Char] = dir match
-      case Direction.Right     => (c, i) => Try(grid(row)(col + i)).toOption
-      case Direction.Left      => (c, i) => Try(grid(row)(col - i)).toOption
-      case Direction.Up        => (c, i) => Try(grid(row - i)(col)).toOption
-      case Direction.Down      => (c, i) => Try(grid(row + i)(col)).toOption
-      case Direction.UpRight   => (c, i) => Try(grid(row - i)(col + i)).toOption
-      case Direction.DownRight => (c, i) => Try(grid(row + i)(col + i)).toOption
-      case Direction.DownLeft  => (c, i) => Try(grid(row + i)(col - i)).toOption
-      case Direction.UpLeft    => (c, i) => Try(grid(row - i)(col - i)).toOption
-    val target = pattern.flatMap((c, i) => advanceFn(c, i)).mkString
+    val advanceFn: (Int) => Try[Char] = dir match
+      case Direction.Right     => (i) => Try(grid(row)(col + i))
+      case Direction.Left      => (i) => Try(grid(row)(col - i))
+      case Direction.Up        => (i) => Try(grid(row - i)(col))
+      case Direction.Down      => (i) => Try(grid(row + i)(col))
+      case Direction.UpRight   => (i) => Try(grid(row - i)(col + i))
+      case Direction.DownRight => (i) => Try(grid(row + i)(col + i))
+      case Direction.DownLeft  => (i) => Try(grid(row + i)(col - i))
+      case Direction.UpLeft    => (i) => Try(grid(row - i)(col - i))
+    val target = Range(0, phrase.length()).flatMap(i => advanceFn(i).toOption).mkString
     if phrase == target then Some(WordSearchResult(row, col, dir))
     else None
   }
