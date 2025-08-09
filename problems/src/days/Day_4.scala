@@ -45,26 +45,24 @@ case object Day_4 extends Day {
       case Direction.DownLeft  => (c, i) => Try(grid(row + i)(col - i)).toOption
       case Direction.UpLeft    => (c, i) => Try(grid(row - i)(col - i)).toOption
     val target = pattern.flatMap((c, i) => advanceFn(c, i)).mkString
-    if phrase == target then
-      //   println(s"Found $phrase at ($row, $col) looking $dir")
-      Some(WordSearchResult(row, col, dir))
+    if phrase == target then Some(WordSearchResult(row, col, dir))
     else None
   }
 
-  private def search(grid: Array[Array[Char]], phrase: String) =
+  private def search(
+      grid: Array[Array[Char]],
+      phrase: String,
+      dirs: Array[Direction] = Direction.values
+  ) =
     var wordsFound = 0
     val rows       = grid.length
     val cols       = grid(0).length
-    Range(0, rows).map(r =>
-      Range(0, cols).map(c =>
-        Direction.values.map(dir =>
-          findTargetPhrase(grid, r, c, phrase, dir) match
-            case Some(_) => wordsFound += 1
-            case None    => ()
-        )
-      )
-    )
-    wordsFound
+    val results = for {
+      r <- Range(0, rows)
+      c <- Range(0, cols)
+      d <- dirs
+    } yield findTargetPhrase(grid, r, c, phrase, d)
+    results.flatten
 
   // ================================================= //
 
@@ -72,16 +70,28 @@ case object Day_4 extends Day {
     val data     = exampleData
     val grid     = toCharGrid(data)
     val word     = "XMAS"
-    val numFound = search(grid, word)
+    val numFound = search(grid, word).length
     println(s"Found '$word' $numFound times")
 
   override def part1: Unit =
     val data     = Utils.readDailyResourceIntoString(4)
     val grid     = toCharGrid(data)
     val word     = "XMAS"
-    val numFound = search(grid, word)
+    val numFound = search(grid, word).length
     println(s"Found '$word' $numFound times")
 
-  override def part2: Unit = ()
+  override def part2: Unit =
+    val data = exampleData
+    val grid = toCharGrid(data)
+    val word = "MAS"
+    val diagonals =
+      Array(Direction.DownLeft, Direction.DownRight, Direction.UpLeft, Direction.UpRight)
+    val results = search(grid, word, diagonals)
+    // TODO: Fold the results into Xs that meet at the A
+    // That means for each thing, figure out where the A is
+    // Then determine if they overlap
+    // Get the count of the Xs
+    val numFound = 0
+    println(s"Found '$word' $numFound times")
 
 }
