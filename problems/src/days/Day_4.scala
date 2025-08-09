@@ -32,6 +32,7 @@ case object Day_4 extends Day {
       phrase: String,
       dir: Direction
   ): Option[WordSearchResult] = {
+    // TODO: Just make Directions an apply method that transforms (r,c) pairs?
     val advanceFn: (Int) => Try[Char] = dir match
       case Direction.Right     => (i) => Try(grid(row)(col + i))
       case Direction.Left      => (i) => Try(grid(row)(col - i))
