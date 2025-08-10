@@ -87,10 +87,15 @@ case object Day_4 extends Day {
     val data = Utils.readDailyResourceIntoString(4)
     val grid = toCharGrid(data)
     val word = "MAS"
+    // Xs can only be made from diagonals, so we won't search ortho directions
     val diagonals =
       Array(Direction.DownLeft, Direction.DownRight, Direction.UpLeft, Direction.UpRight)
-    val results  = search(grid, word, diagonals)
-    val numFound = results.groupBy(r => r.dir(r.row, r.col, 1)).filter((k, v) => v.length > 1).size
+    val results = search(grid, word, diagonals)
+    // An X-MAS only exists if two versions of the word cross through the same 'A'
+    val numFound = results
+      .groupBy(r => r.dir(r.row, r.col, 1)) // group by common 'A'
+      .filter((k, v) => v.length > 1)       // get rid of the ones that don't have a pair
+      .size
     println(s"Found '$word' $numFound times")
 
 }
