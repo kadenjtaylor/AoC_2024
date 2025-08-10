@@ -84,17 +84,13 @@ case object Day_4 extends Day {
     println(s"Found '$word' $numFound times")
 
   override def part2: Unit =
-    val data = exampleData
+    val data = Utils.readDailyResourceIntoString(4)
     val grid = toCharGrid(data)
     val word = "MAS"
     val diagonals =
       Array(Direction.DownLeft, Direction.DownRight, Direction.UpLeft, Direction.UpRight)
-    val results = search(grid, word, diagonals)
-    // TODO: Fold the results into Xs that meet at the A
-    // That means for each thing, figure out where the A is
-    // Then determine if they overlap
-    // Get the count of the Xs
-    val numFound = 0
+    val results  = search(grid, word, diagonals)
+    val numFound = results.groupBy(r => r.dir(r.row, r.col, 1)).filter((k, v) => v.length > 1).size
     println(s"Found '$word' $numFound times")
 
 }
