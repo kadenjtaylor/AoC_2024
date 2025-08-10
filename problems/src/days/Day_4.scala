@@ -25,6 +25,17 @@ case object Day_4 extends Day {
   enum Direction:
     case Right, Left, Down, Up, UpRight, DownRight, DownLeft, UpLeft
 
+    def apply(r: Int, c: Int, i: Int): (Int, Int) =
+      this match
+        case Right     => (r, c + i)
+        case Left      => (r, c - i)
+        case Up        => (r - i, c)
+        case Down      => (r + i, c)
+        case UpRight   => (r - i, c + i)
+        case DownRight => (r + i, c + i)
+        case DownLeft  => (r + i, c - i)
+        case UpLeft    => (r - i, c - i)
+
   private def findTargetPhrase(
       grid: Array[Array[Char]],
       row: Int,
@@ -32,17 +43,11 @@ case object Day_4 extends Day {
       phrase: String,
       dir: Direction
   ): Option[WordSearchResult] = {
-    // TODO: Just make Directions an apply method that transforms (r,c) pairs?
-    val advanceFn: (Int) => Try[Char] = dir match
-      case Direction.Right     => (i) => Try(grid(row)(col + i))
-      case Direction.Left      => (i) => Try(grid(row)(col - i))
-      case Direction.Up        => (i) => Try(grid(row - i)(col))
-      case Direction.Down      => (i) => Try(grid(row + i)(col))
-      case Direction.UpRight   => (i) => Try(grid(row - i)(col + i))
-      case Direction.DownRight => (i) => Try(grid(row + i)(col + i))
-      case Direction.DownLeft  => (i) => Try(grid(row + i)(col - i))
-      case Direction.UpLeft    => (i) => Try(grid(row - i)(col - i))
-    val target = Range(0, phrase.length()).flatMap(i => advanceFn(i).toOption).mkString
+    def charAt(i: Int): Option[Char] = {
+      val (r, c) = dir(row, col, i)
+      Try(grid(r)(c)).toOption
+    }
+    val target = Range(0, phrase.length()).flatMap(charAt(_)).mkString
     if phrase == target then Some(WordSearchResult(row, col, dir))
     else None
   }
