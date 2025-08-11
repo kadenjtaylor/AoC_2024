@@ -82,13 +82,10 @@ case object Day_5 extends Day {
         case 0 => None
         case 1 => Some(l(l.length / 2))
 
-    def fixUpdate(rules: List[Rule], update: Update): Option[Update] =
-      println(s"Wrong: ${update.mkString(",")}")
-      rules
+    def fixUpdate(rules: List[Rule], update: Update): Update =
+      val rulesINeed = rules
         .filter((a, b) => update.contains(a) && update.contains(b))
-        .foreach(r => println(s"- $r"))
-      // TODO: Actually finish implementing
-      None
+      update.sortWith((a, b) => rulesINeed.contains((a, b)))
   }
 
   // ====================================================== //
@@ -110,11 +107,12 @@ case object Day_5 extends Day {
     println(s"Sum of middle pages: $result")
 
   override def part2: Unit =
-    val (rules, updates) = parseData(exampleData)
+    val (rules, updates) = parseData(Utils.readDailyResourceIntoString(5))
     val result = updates
       .filter(u => !validate(rules, u))
-      .flatMap(u => fixUpdate(rules, u))
+      .map(u => fixUpdate(rules, u))
       .flatMap(u => middleElement(u))
       .sum
+    println(s"Sum of fixed middle pages: $result")
 
 }
