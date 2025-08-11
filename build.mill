@@ -5,11 +5,20 @@ import scalalib._
 import mill.api.Task.Simple
 
 object problems extends ScalaModule {
-  def scalaVersion = "3.7.2"
+
+  // Givens changed at 3.7, which I think is affecting fastparse
+  val NewScala = "3.7.2"
+
+  // So we'll use LTS version for now
+  val LTSScala = "3.3.6"
+
+  def scalaVersion = LTSScala
 
   override def mvnDeps: Simple[Seq[Dep]] =
     Seq(
-        mvn"com.lihaoyi::os-lib::0.11.5"
+        mvn"com.lihaoyi::os-lib::0.11.5",
+        mvn"com.lihaoyi::fastparse::3.1.1",
+        // mvn"org.typelevel::cats-parse::1.1.0"
     )
 
 }
