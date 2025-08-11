@@ -5,6 +5,7 @@ import days.Day_5.Parsing.parseData
 import days.Day_5.DataManipulation.validate
 import days.Day_5.DataManipulation.middleElement
 import model.Utils
+import days.Day_5.DataManipulation.fixUpdate
 
 case object Day_5 extends Day {
 
@@ -80,6 +81,14 @@ case object Day_5 extends Day {
       l.length % 2 match
         case 0 => None
         case 1 => Some(l(l.length / 2))
+
+    def fixUpdate(rules: List[Rule], update: Update): Option[Update] =
+      println(s"Wrong: ${update.mkString(",")}")
+      rules
+        .filter((a, b) => update.contains(a) && update.contains(b))
+        .foreach(r => println(s"- $r"))
+      // TODO: Actually finish implementing
+      None
   }
 
   // ====================================================== //
@@ -100,6 +109,12 @@ case object Day_5 extends Day {
       .sum
     println(s"Sum of middle pages: $result")
 
-  override def part2: Unit = ()
+  override def part2: Unit =
+    val (rules, updates) = parseData(exampleData)
+    val result = updates
+      .filter(u => !validate(rules, u))
+      .flatMap(u => fixUpdate(rules, u))
+      .flatMap(u => middleElement(u))
+      .sum
 
 }
