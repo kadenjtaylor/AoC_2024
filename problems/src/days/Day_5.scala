@@ -1,6 +1,10 @@
 package days
 
 import model.Day
+import days.Day_5.Parsing.parseData
+import days.Day_5.DataManipulation.validate
+import days.Day_5.DataManipulation.middleElement
+import model.Utils
 
 case object Day_5 extends Day {
 
@@ -35,6 +39,9 @@ case object Day_5 extends Day {
 
   // ====================================================== //
 
+  type Rule    = (Int, Int)
+  type Update  = List[Int]
+  type Data    = (List[Rule], List[Update])
   type Follows = Map[Int, Int]
 
   object Parsing {
@@ -49,22 +56,49 @@ case object Day_5 extends Day {
     def ruleSection[$: P] = P(rule.rep(sep = "\n"))
 
     def updateSection[$: P] = P(update.rep(sep = "\n"))
+
+    def parseData(s: String): Data =
+      val parts         = s.split("\n\n")
+      val rulesResult   = fastparse.parse(parts(0), Parsing.ruleSection)
+      val updatesResult = fastparse.parse(parts(1), Parsing.updateSection)
+      (rulesResult.get.value.toList, updatesResult.get.value.map(_.toList).toList)
+  }
+
+  object DataManipulation {
+
+    def validate(rules: List[Rule], update: Update) =
+      val truths = for {
+        i <- Range(0, update.length)
+        j <- Range(i + 1, update.length)
+      } yield (update(i), update(j))
+      rules
+        .filter((a, b) => update.contains(a) && update.contains(b))
+        .map(rule => truths.contains(rule))
+        .reduce(_ && _)
+
+    def middleElement[T](l: List[T]): Option[T] =
+      l.length % 2 match
+        case 0 => None
+        case 1 => Some(l(l.length / 2))
   }
 
   // ====================================================== //
 
-//   val number = P(CharIn('0' to '9').rep(1).!.map(_.toInt))
-
   override def example: Unit =
-    // Okay, I still have yet to create a parser that covers the whole thing
-    // But I can make it work w/ sections now... which is good enough to move on
-    val parts         = exampleData.split("\n\n")
-    val rulesResult   = fastparse.parse(parts(0), Parsing.ruleSection)
-    val updatesResult = fastparse.parse(parts(1), Parsing.updateSection)
-    println(rulesResult.get.value)
-    println(updatesResult.get.value)
+    val (rules, updates) = parseData(exampleData)
+    val result = updates
+      .filter(u => validate(rules, u))
+      .flatMap(u => middleElement(u))
+      .sum
+    println(s"Sum of middle pages: $result")
 
-  override def part1: Unit = ()
+  override def part1: Unit =
+    val (rules, updates) = parseData(Utils.readDailyResourceIntoString(5))
+    val result = updates
+      .filter(u => validate(rules, u))
+      .flatMap(u => middleElement(u))
+      .sum
+    println(s"Sum of middle pages: $result")
 
   override def part2: Unit = ()
 
