@@ -48,7 +48,7 @@ case object Day_5 extends Day {
   object Parsing {
     import fastparse._, SingleLineWhitespace._
 
-    def number[$: P] = P(CharIn("0-9").rep.!.map(_.toInt))
+    def number[$: P] = P(CharIn("0-9").rep(1).!.map(_.toInt))
 
     def rule[$: P] = P(number ~ "|" ~ number)
 
@@ -58,11 +58,11 @@ case object Day_5 extends Day {
 
     def updateSection[$: P] = P(update.rep(sep = "\n"))
 
+    def wholeThing[$: P] = P(ruleSection ~ "\n\n" ~ updateSection ~ End)
+
     def parseData(s: String): Data =
-      val parts         = s.split("\n\n")
-      val rulesResult   = fastparse.parse(parts(0), Parsing.ruleSection)
-      val updatesResult = fastparse.parse(parts(1), Parsing.updateSection)
-      (rulesResult.get.value.toList, updatesResult.get.value.map(_.toList).toList)
+      val result = fastparse.parse(s, Parsing.wholeThing).get.value
+      (result._1.toList, result._2.map(_.toList).toList)
   }
 
   object DataManipulation {
