@@ -1,11 +1,7 @@
 package days
 
 import model.Day
-import days.Day_5.Parsing.parseData
-import days.Day_5.DataManipulation.validate
-import days.Day_5.DataManipulation.middleElement
 import model.Utils
-import days.Day_5.DataManipulation.fixUpdate
 
 case object Day_5 extends Day {
 
@@ -40,10 +36,9 @@ case object Day_5 extends Day {
 
   // ====================================================== //
 
-  type Rule    = (Int, Int)
-  type Update  = List[Int]
-  type Data    = (List[Rule], List[Update])
-  type Follows = Map[Int, Int]
+  type Rule   = (Int, Int)
+  type Update = List[Int]
+  type Data   = (List[Rule], List[Update])
 
   object Parsing {
     import fastparse._, SingleLineWhitespace._
@@ -65,33 +60,30 @@ case object Day_5 extends Day {
       (result._1.toList, result._2.map(_.toList).toList)
   }
 
-  object DataManipulation {
+  def validate(rules: List[Rule], update: Update) =
+    val truths = for {
+      i <- Range(0, update.length)
+      j <- Range(i + 1, update.length)
+    } yield (update(i), update(j))
+    rules
+      .filter((a, b) => update.contains(a) && update.contains(b))
+      .map(rule => truths.contains(rule))
+      .reduce(_ && _)
 
-    def validate(rules: List[Rule], update: Update) =
-      val truths = for {
-        i <- Range(0, update.length)
-        j <- Range(i + 1, update.length)
-      } yield (update(i), update(j))
-      rules
-        .filter((a, b) => update.contains(a) && update.contains(b))
-        .map(rule => truths.contains(rule))
-        .reduce(_ && _)
+  def middleElement[T](l: List[T]): Option[T] =
+    l.length % 2 match
+      case 0 => None
+      case 1 => Some(l(l.length / 2))
 
-    def middleElement[T](l: List[T]): Option[T] =
-      l.length % 2 match
-        case 0 => None
-        case 1 => Some(l(l.length / 2))
-
-    def fixUpdate(rules: List[Rule], update: Update): Update =
-      val rulesINeed = rules
-        .filter((a, b) => update.contains(a) && update.contains(b))
-      update.sortWith((a, b) => rulesINeed.contains((a, b)))
-  }
+  def fixUpdate(rules: List[Rule], update: Update): Update =
+    val rulesINeed = rules
+      .filter((a, b) => update.contains(a) && update.contains(b))
+    update.sortWith((a, b) => rulesINeed.contains((a, b)))
 
   // ====================================================== //
 
   override def example: Unit =
-    val (rules, updates) = parseData(exampleData)
+    val (rules, updates) = Parsing.parseData(exampleData)
     val result = updates
       .filter(u => validate(rules, u))
       .flatMap(u => middleElement(u))
@@ -99,7 +91,7 @@ case object Day_5 extends Day {
     println(s"Sum of middle pages: $result")
 
   override def part1: Unit =
-    val (rules, updates) = parseData(Utils.readDailyResourceIntoString(5))
+    val (rules, updates) = Parsing.parseData(Utils.readDailyResourceIntoString(5))
     val result = updates
       .filter(u => validate(rules, u))
       .flatMap(u => middleElement(u))
@@ -107,7 +99,7 @@ case object Day_5 extends Day {
     println(s"Sum of middle pages: $result")
 
   override def part2: Unit =
-    val (rules, updates) = parseData(Utils.readDailyResourceIntoString(5))
+    val (rules, updates) = Parsing.parseData(Utils.readDailyResourceIntoString(5))
     val result = updates
       .filter(u => !validate(rules, u))
       .map(u => fixUpdate(rules, u))
