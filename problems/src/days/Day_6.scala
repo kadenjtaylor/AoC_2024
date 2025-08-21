@@ -7,6 +7,8 @@ import scala.util.Try
 import scala.util.Failure
 import scala.util.Success
 import model.Utils
+import java.util.Timer
+import fastparse.internal.Util
 
 case object Day_6 extends Day {
 
@@ -59,7 +61,6 @@ case object Day_6 extends Day {
     val replacementFailure = Left(s"Nothing to replace at index $index")
     if 0 <= index || index <= list.length then
       val (l1, l2) = list.splitAt(index)
-      // println(s"[${l1.mkString(", ")}], [${l2.mkString(", ")}]")
       Try(l2.head).toEither.left
         .flatMap(_ => replacementFailure)
         .flatMap(fn)
@@ -80,12 +81,12 @@ case object Day_6 extends Day {
       )
       .reduce(_ || _)
 
+    def guard: Option[Guard] = guards.headOption
+
     def makeMove(m: Move): Either[Error, Environment] =
-      // println(s"Attempting $m")
       val replacementFailure = Left(s"Nothing to replace at index ${m.index}}")
       if 0 <= m.index || m.index <= guards.length then
         val (l1, l2) = guards.splitAt(m.index)
-        // println(s"[${l1.mkString(", ")}], [${l2.mkString(", ")}]")
         val thing: Either[String, (Guard, Option[Location])] = Try(l2.head).toEither.left
           .flatMap(_ => replacementFailure)
           .flatMap(guard =>
@@ -96,7 +97,6 @@ case object Day_6 extends Day {
                   case Guard(loc, dir) if obstacles.contains(loc) =>
                     Left("Guard can't go there - their path is blocked.")
                   case g @ Guard(loc, dir) =>
-                    // println(s"Stepping forward($dir) 1 Square to $loc")
                     Right((g, Some(loc)))
               }
           )
@@ -107,23 +107,8 @@ case object Day_6 extends Day {
           )
       else replacementFailure
 
-      // replaceWith(guards)(
-      //   m.index,
-      //   guard =>
-      //     m match
-      //       case Move.Rotate90Right(i) => Right(guard.rotate90Right)
-      //       case Move.StepForward(i) => {
-      //         guard.stepForward match
-      //           case Guard(loc, dir) if obstacles.contains(loc) =>
-      //             Left("Guard can't go there - their path is blocked.")
-      //           case g => Right(g)
-      //       }
-      // )
-
     def nextPhase(strategy: Strategy): Either[Error, Environment] =
       val move = strategy(this)
-      // println(s"Chose move: $move")
-      // println(s"${guards.length} guards in the environment")
       makeMove(move)
 
     // (Row X Column), or (Height X Width)
@@ -229,43 +214,41 @@ case object Day_6 extends Day {
     given strategy, ending at the point the guard would exit the known
     environment.
    */
-  def predictRoute(env: Environment, strategy: Strategy): List[Location] =
-    ???
+  def predictRoute(env: Environment, strategy: Strategy): (List[Location], Environment) =
+    var e                    = env
+    var done                 = false
+    var moveNumber           = 0
+    var locs: List[Location] = List()
+    while (e.hasVisibleGuards && !done) {
+      e.nextPhase(basicStrat) match
+        case Left(err) => {
+          println(err)
+          done = true
+        }
+        case Right(newEnv) => {
+          if newEnv.hasVisibleGuards then
+            e.guard.foreach { g =>
+              val l = g.loc
+              locs = locs.appended(l)
+            }
+            e = newEnv
+            moveNumber = moveNumber + 1
+          else {
+            done = true
+          }
+        }
+    }
+    (locs, e)
 
   override def example: Unit =
-    var done       = false
-    var env        = parseEnvironment(exampleData)
-    var moveNumber = 0
-    while (env.hasVisibleGuards && !done) {
-      env.nextPhase(basicStrat) match
-        case Left(err) => {
-          println(err)
-          done = true
-        }
-        case Right(newEnv) => {
-          env = newEnv
-          moveNumber = moveNumber + 1
-        }
-    }
-    println(env.repr().count(c => c == 'X'))
+    var env             = parseEnvironment(exampleData)
+    val (route, newEnv) = predictRoute(env, basicStrat)
+    println(route.toSet.size)
 
-  override def part1: Unit = {
-    var done       = false
-    var env        = parseEnvironment(Utils.readDailyResourceIntoString(6))
-    var moveNumber = 0
-    while (env.hasVisibleGuards && !done) {
-      env.nextPhase(basicStrat) match
-        case Left(err) => {
-          println(err)
-          done = true
-        }
-        case Right(newEnv) => {
-          env = newEnv
-          moveNumber = moveNumber + 1
-        }
-    }
-    println(env.repr().count(c => c == 'X'))
-  }
+  override def part1: Unit =
+    var env             = parseEnvironment(Utils.readDailyResourceIntoString(6))
+    val (route, newEnv) = predictRoute(env, basicStrat)
+    println(route.toSet.size)
 
   override def part2: Unit = ()
 
