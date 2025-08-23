@@ -4,10 +4,7 @@ import model.Day
 import days.Day_6.Parsing.parseEnvironment
 import scala.annotation.switch
 import scala.util.Try
-import scala.util.Failure
-import scala.util.Success
 import model.Utils
-import java.util.Timer
 import fastparse.internal.Util
 
 case object Day_6 extends Day {
@@ -48,75 +45,49 @@ case object Day_6 extends Day {
   }
 
   enum Move:
-    case Rotate90Right(i: Int)
-    case StepForward(i: Int)
+    case Rotate90Right
+    case StepForward
 
-    def index = this match
-      case Rotate90Right(index) => index
-      case StepForward(index)   => index
-
-  type Error = String
-
-  def replaceWith[T](list: List[T])(index: Int, fn: T => Either[Error, T]): Either[Error, List[T]] =
-    val replacementFailure = Left(s"Nothing to replace at index $index")
-    if 0 <= index || index <= list.length then
-      val (l1, l2) = list.splitAt(index)
-      Try(l2.head).toEither.left
-        .flatMap(_ => replacementFailure)
-        .flatMap(fn)
-        .map(el => (l1 :+ el) ++ l2.drop(1))
-    else replacementFailure
+  enum Error:
+    case Blocked
+    case LoopDetected
 
   case class Environment(
-      guards: List[Guard],
+      guard: Guard,
       obstacles: List[Location],
-      visited: Set[Location],
-      bounds: Option[(Int, Int)]
+      visited: List[(Direction, Location)],
+      bounds: (Int, Int)
   ) {
-    def hasVisibleGuards: Boolean = guards
-      .map(g =>
-        (bounds, g.loc) match
-          case (Some(rMax, cMax), (r, c)) => c <= cMax && r <= rMax
-          case (None, _)                  => true
-      )
-      .reduce(_ || _)
+    def hasVisibleGuards: Boolean =
+      (guard.loc, bounds) match
+        case ((r, c), (rMax, cMax)) => {
+          0 <= c && c < cMax && 0 <= r && r < rMax
+        }
 
-    def guard: Option[Guard] = guards.headOption
+    def withObstable(loc: (Int, Int)): Either[Error, Environment] = {
+      if guard.loc == loc || obstacles.contains(loc) then Left(Error.Blocked)
+      else Right(Environment(guard, obstacles.appended(loc), visited, bounds))
+    }
 
     def makeMove(m: Move): Either[Error, Environment] =
-      val replacementFailure = Left(s"Nothing to replace at index ${m.index}}")
-      if 0 <= m.index || m.index <= guards.length then
-        val (l1, l2) = guards.splitAt(m.index)
-        val thing: Either[String, (Guard, Option[Location])] = Try(l2.head).toEither.left
-          .flatMap(_ => replacementFailure)
-          .flatMap(guard =>
-            m match
-              case Move.Rotate90Right(i) => Right((guard.rotate90Right, None))
-              case Move.StepForward(i) => {
-                guard.stepForward match
-                  case Guard(loc, dir) if obstacles.contains(loc) =>
-                    Left("Guard can't go there - their path is blocked.")
-                  case g @ Guard(loc, dir) =>
-                    Right((g, Some(loc)))
-              }
-          )
-        thing
-          .map((el, loc) => ((l1 :+ el) ++ l2.drop(1), loc))
-          .map((newGuards, visit) =>
-            Environment(newGuards, obstacles, visited ++ visit.toList, bounds)
-          )
-      else replacementFailure
+      val newGuard = m match
+        case Move.Rotate90Right => Right(guard.rotate90Right)
+        case Move.StepForward => {
+          guard.stepForward match
+            case Guard(loc, dir) if obstacles.contains(loc) => Left(Error.Blocked)
+            case g @ Guard(loc, dir)                        => Right(g)
+        }
+      newGuard.flatMap(g =>
+        if visited.contains((g.dir, g.loc)) then Left(Error.LoopDetected)
+        else Right(Environment(g, obstacles, visited :+ (g.dir, g.loc), bounds))
+      )
 
     def nextPhase(strategy: Strategy): Either[Error, Environment] =
       val move = strategy(this)
       makeMove(move)
 
-    // (Row X Column), or (Height X Width)
-    def withBoundaryOf(originOppositeCorner: (Int, Int)) =
-      Environment(guards, obstacles, visited, Some(originOppositeCorner))
-
     def get(r: Int, c: Int): Char =
-      val gs = guards
+      val gs = List(guard)
         .filter(_.loc == (r, c))
         .map(g =>
           g.dir match
@@ -126,14 +97,14 @@ case object Day_6 extends Day {
             case Direction.Right => '>'
         )
       val os      = obstacles.filter((oRow, oCol) => (oRow, oCol) == (r, c)).map(_ => '#')
-      val vs      = visited.filter((vRow, vCol) => (vRow, vCol) == (r, c)).map(_ => 'X')
+      val vs      = visited.filter((_, loc) => (loc._1, loc._2) == (r, c)).map(_ => 'X')
       val empty   = List('.')
       val choices = (gs ++ os ++ vs ++ empty)
       choices.head
 
     def repr(): String =
       (for {
-        (w, h) <- bounds.toIndexedSeq
+        (w, h) <- Seq(bounds)
         r      <- Range(0, w)
         c      <- Range(0, h)
         char = get(r, c)
@@ -147,17 +118,26 @@ case object Day_6 extends Day {
   type Strategy = Environment => Move
 
   def basicStrat: Strategy = (env) => {
-    env.guards.zipWithIndex
-      .map((g, i) => {
-        val inFrontOfMe = g.dir(g.loc)
-        if env.obstacles.contains(inFrontOfMe) || env.guards.contains(inFrontOfMe) then
-          Move.Rotate90Right(i)
-        else Move.StepForward(i)
-      })
-      .head
+    val inFrontOfMe = env.guard.dir(env.guard.loc)
+    if env.obstacles.contains(inFrontOfMe) then Move.Rotate90Right
+    else Move.StepForward
   }
 
   object Parsing {
+
+    case class EnvBuilder(
+        guards: List[Guard],
+        obstacles: List[Location]
+    ) {
+      def withGuard(g: Guard) = EnvBuilder(guards.appended(g), obstacles)
+
+      def withObstacle(loc: Location) = EnvBuilder(guards, obstacles.appended(loc))
+
+      // (Row X Column), or (Height X Width)
+      def withBoundaryOf(originOppositeCorner: (Int, Int)) =
+        Environment(guards.head, obstacles, List(), originOppositeCorner)
+    }
+
     def parseEnvironment(s: String): Environment =
       val lines  = s.split("\n")
       val height = lines.length
@@ -166,90 +146,43 @@ case object Day_6 extends Day {
         .flatMap((row, rowIndex) =>
           row.zipWithIndex.map((char, colIndex) => (rowIndex, colIndex, char))
         )
-        .foldLeft(Environment(List(), List(), Set(), None))((env, point) =>
+        .foldLeft(EnvBuilder(List(), List()))((env, point) =>
           point match
-            case (r, c, '#') =>
-              Environment(env.guards, env.obstacles.appended((r, c)), env.visited, env.bounds)
-            case (r, c, '^') =>
-              Environment(
-                env.guards.appended(Guard((r, c), Direction.Up)),
-                env.obstacles,
-                env.visited,
-                env.bounds
-              )
-            case (r, c, '>') =>
-              Environment(
-                env.guards.appended(Guard((r, c), Direction.Right)),
-                env.obstacles,
-                env.visited,
-                env.bounds
-              )
-            case (r, c, 'V') =>
-              Environment(
-                env.guards.appended(Guard((r, c), Direction.Down)),
-                env.obstacles,
-                env.visited,
-                env.bounds
-              )
-            case (r, c, '<') =>
-              Environment(
-                env.guards.appended(Guard((r, c), Direction.Left)),
-                env.obstacles,
-                env.visited,
-                env.bounds
-              )
-            case _ =>
-              Environment(
-                env.guards,
-                env.obstacles,
-                env.visited,
-                env.bounds
-              ) // do nothing - empty case
+            case (r, c, '#') => env.withObstacle((r, c))
+            case (r, c, '^') => env.withGuard(Guard((r, c), Direction.Up))
+            case (r, c, '>') => env.withGuard(Guard((r, c), Direction.Right))
+            case (r, c, 'V') => env.withGuard(Guard((r, c), Direction.Down))
+            case (r, c, '<') => env.withGuard(Guard((r, c), Direction.Left))
+            case _           => env
         )
         .withBoundaryOf((height, width))
   }
 
-  /*
-    Returns the list of locations the guard would follow according to the
-    given strategy, ending at the point the guard would exit the known
-    environment.
-   */
-  def predictRoute(env: Environment, strategy: Strategy): (List[Location], Environment) =
-    var e                    = env
-    var done                 = false
-    var moveNumber           = 0
-    var locs: List[Location] = List()
-    while (e.hasVisibleGuards && !done) {
-      e.nextPhase(basicStrat) match
-        case Left(err) => {
-          println(err)
-          done = true
-        }
-        case Right(newEnv) => {
-          if newEnv.hasVisibleGuards then
-            e.guard.foreach { g =>
-              val l = g.loc
-              locs = locs.appended(l)
-            }
-            e = newEnv
-            moveNumber = moveNumber + 1
-          else {
-            done = true
-          }
-        }
-    }
-    (locs, e)
+  def guardPath(
+      env: Environment,
+      strategy: Strategy = basicStrat
+  ): List[(Environment, Location)] =
+    List.unfold(env)(inEnv =>
+      inEnv
+        .nextPhase(strategy)
+        .flatMap(e => if e.hasVisibleGuards then Right(((inEnv, e.guard.loc), e)) else Left("FAIL"))
+        .toOption
+    )
 
   override def example: Unit =
-    var env             = parseEnvironment(exampleData)
-    val (route, newEnv) = predictRoute(env, basicStrat)
-    println(route.toSet.size)
+    var env  = parseEnvironment(exampleData)
+    val path = guardPath(env)
+    println(path.toSet.size)
 
   override def part1: Unit =
-    var env             = parseEnvironment(Utils.readDailyResourceIntoString(6))
-    val (route, newEnv) = predictRoute(env, basicStrat)
-    println(route.toSet.size)
+    var env  = parseEnvironment(Utils.readDailyResourceIntoString(6))
+    val path = guardPath(env)
+    println(path.toSet.size)
 
-  override def part2: Unit = ()
+  override def part2: Unit =
+    var env = parseEnvironment(Utils.readDailyResourceIntoString(6))
+    guardPath(env).foreach((env, point) =>
+      println(s"Can putting an obstacle at $point cause a loop in {env}?")
+    )
 
 }
