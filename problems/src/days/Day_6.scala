@@ -6,6 +6,8 @@ import scala.annotation.switch
 import scala.util.Try
 import model.Utils
 import fastparse.internal.Util
+import scala.util.Failure
+import scala.util.Success
 
 case object Day_6 extends Day {
 
@@ -83,8 +85,7 @@ case object Day_6 extends Day {
       )
 
     def nextPhase(strategy: Strategy): Either[Error, Environment] =
-      val move = strategy(this)
-      makeMove(move)
+      makeMove(strategy(this))
 
     def get(r: Int, c: Int): Char =
       val gs = List(guard)
@@ -161,28 +162,58 @@ case object Day_6 extends Day {
   def guardPath(
       env: Environment,
       strategy: Strategy = basicStrat
-  ): List[(Environment, Location)] =
-    List.unfold(env)(inEnv =>
-      inEnv
-        .nextPhase(strategy)
-        .flatMap(e => if e.hasVisibleGuards then Right(((inEnv, e.guard.loc), e)) else Left("FAIL"))
-        .toOption
+  ): Try[List[(Environment, Location)]] =
+    Try(
+      List.unfold(env)(inEnv =>
+        if inEnv.hasVisibleGuards then
+          inEnv.nextPhase(strategy) match
+            case Right(nextEnv) if nextEnv.hasVisibleGuards =>
+              Some((inEnv, nextEnv.guard.loc), nextEnv)
+            case Left(Error.Blocked)      => throw new RuntimeException("BLOCK")
+            case Left(Error.LoopDetected) => throw new RuntimeException("LOOP")
+            case Right(_)                 => None
+        else None
+      )
     )
+
+  def hasLoop(env: Environment, strategy: Strategy = basicStrat): Boolean = {
+    if !env.hasVisibleGuards then false
+    else
+      env.nextPhase(strategy) match
+        case Left(Error.Blocked) => {
+          ??? // Should never happen
+        }
+        case Left(Error.LoopDetected) => {
+          true
+        }
+        case Right(newEnv) => hasLoop(newEnv)
+  }
 
   override def example: Unit =
     var env  = parseEnvironment(exampleData)
     val path = guardPath(env)
-    println(path.toSet.size)
+    println(s"HasLoop: ${hasLoop(env)}")
+    path match
+      case Failure(exception) => println(exception)
+      case Success(value)     => println(value.map(_._2).toSet.size)
 
   override def part1: Unit =
     var env  = parseEnvironment(Utils.readDailyResourceIntoString(6))
     val path = guardPath(env)
-    println(path.toSet.size)
+    path match
+      case Failure(exception) => println(exception)
+      case Success(value)     => println(value.map(_._2).toSet.size)
 
   override def part2: Unit =
-    var env = parseEnvironment(Utils.readDailyResourceIntoString(6))
-    guardPath(env).foreach((env, point) =>
-      println(s"Can putting an obstacle at $point cause a loop in {env}?")
-    )
-
+    var env     = parseEnvironment(Utils.readDailyResourceIntoString(6))
+    val ogGuard = env.guard
+    val path    = guardPath(env).get.map((_, p) => p).toSet
+    val candidates = for {
+      p       <- path
+      hypoEnv <- env.withObstable(p).toOption
+    } yield (hypoEnv, p)
+    val points = candidates.flatMap((e, p) => {
+      if hasLoop(e) then Some(p) else None
+    })
+    println(s"${points.size}")
 }

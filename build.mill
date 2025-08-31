@@ -18,7 +18,7 @@ object problems extends ScalaModule {
     Seq(
         mvn"com.lihaoyi::os-lib::0.11.5",
         mvn"com.lihaoyi::fastparse::3.1.1",
-        // mvn"org.typelevel::cats-parse::1.1.0"
+        mvn"org.scala-lang.modules::scala-parallel-collections::1.2.0"
     )
 
 }
