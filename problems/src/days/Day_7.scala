@@ -89,4 +89,14 @@ case object Day_7 extends Day {
     println(s"Results Found: ${results.length} / Total: ${results.sum}")
   }
 
+  override def part1: Unit = {
+    val eqs = Parsing.parseData(Utils.readDailyResourceIntoString(7))
+    val results =
+      eqs.flatMap(e =>
+        val solutions = e.solveWith(Set(Operator.Addition, Operator.Multiplication))
+        if solutions.isEmpty then None
+        else Some(e.result)
+      )
+    println(s"Results Found: ${results.length} / Total: ${results.sum}")
+  }
 }
