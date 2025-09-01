@@ -83,37 +83,30 @@ case object Day_7 extends Day {
       fastparse.parse(s, Parsing.wholeThing).get.value.toList
   }
 
+  def solve(eqs: List[Equation], ops: Set[Operator]): List[Long] = {
+    eqs.flatMap(e =>
+      val solutions = e.solveWith(ops)
+      if solutions.isEmpty then None
+      else Some(e.result)
+    )
+  }
+
   override def example: Unit = {
-    val eqs = Parsing.parseData(exampleData)
-    val results =
-      eqs.flatMap(e =>
-        val solutions = e.solveWith(Set(Operator.Addition, Operator.Multiplication))
-        if solutions.isEmpty then None
-        else Some(e.result)
-      )
+    val eqs     = Parsing.parseData(exampleData)
+    val results = solve(eqs, Set(Operator.Addition, Operator.Multiplication))
     println(s"Results Found: ${results.length} / Total: ${results.sum}")
   }
 
   override def part1: Unit = {
-    val eqs = Parsing.parseData(Utils.readDailyResourceIntoString(7))
-    val results =
-      eqs.flatMap(e =>
-        val solutions = e.solveWith(Set(Operator.Addition, Operator.Multiplication))
-        if solutions.isEmpty then None
-        else Some(e.result)
-      )
+    val eqs     = Parsing.parseData(Utils.readDailyResourceIntoString(7))
+    val results = solve(eqs, Set(Operator.Addition, Operator.Multiplication))
     println(s"Results Found: ${results.length} / Total: ${results.sum}")
   }
 
   override def part2: Unit = {
     val eqs = Parsing.parseData(Utils.readDailyResourceIntoString(7))
     val results =
-      eqs.flatMap(e =>
-        val solutions =
-          e.solveWith(Set(Operator.Addition, Operator.Multiplication, Operator.Concatenation))
-        if solutions.isEmpty then None
-        else Some(e.result)
-      )
+      solve(eqs, Set(Operator.Addition, Operator.Multiplication, Operator.Concatenation))
     println(s"Results Found: ${results.length} / Total: ${results.sum}")
   }
 }
