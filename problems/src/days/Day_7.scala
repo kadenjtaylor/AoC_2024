@@ -27,14 +27,17 @@ case object Day_7 extends Day {
       var myList  = List[List[Operator]](List())
       var counter = length
       while (counter > 0) {
-        myList = addMultCombos(myList)
+        myList = addOperatorOptions(myList, options)
         counter -= 1
       }
       myList
     }
 
-    private def addMultCombos(l: List[List[Operator]]): List[List[Operator]] = {
-      l.flatMap(ls => List(ls :+ Operator.Addition, ls :+ Operator.Multiplication))
+    private def addOperatorOptions(
+        l: List[List[Operator]],
+        ops: Set[Operator]
+    ): List[List[Operator]] = {
+      l.flatMap(ls => ops.map(o => ls :+ o))
     }
 
     private def attempt(ops: List[Operator]): Boolean = {
@@ -48,6 +51,7 @@ case object Day_7 extends Day {
         operation._1 match
           case Operator.Addition       => runningTotal + operation._2
           case Operator.Multiplication => runningTotal * operation._2
+          case Operator.Concatenation  => (runningTotal.toString() + operation._2.toString()).toLong
       )
       result == answer
     }
@@ -56,11 +60,12 @@ case object Day_7 extends Day {
   }
 
   enum Operator:
-    case Addition, Multiplication
+    case Addition, Multiplication, Concatenation
 
     override def toString(): String = this match
       case Addition       => "+"
       case Multiplication => "*"
+      case Concatenation  => "||"
 
   object Parsing {
     import fastparse._, NoWhitespace._
@@ -94,6 +99,18 @@ case object Day_7 extends Day {
     val results =
       eqs.flatMap(e =>
         val solutions = e.solveWith(Set(Operator.Addition, Operator.Multiplication))
+        if solutions.isEmpty then None
+        else Some(e.result)
+      )
+    println(s"Results Found: ${results.length} / Total: ${results.sum}")
+  }
+
+  override def part2: Unit = {
+    val eqs = Parsing.parseData(Utils.readDailyResourceIntoString(7))
+    val results =
+      eqs.flatMap(e =>
+        val solutions =
+          e.solveWith(Set(Operator.Addition, Operator.Multiplication, Operator.Concatenation))
         if solutions.isEmpty then None
         else Some(e.result)
       )
