@@ -51,16 +51,16 @@ object Day_8 extends Day {
   case class AntennaMap(nodes: Map[Char, Set[Location]], farCorner: Location)
 
   /*  */
-  def antinodes(m: AntennaMap, char: Char): Set[Location] = {
+  def antinodes(m: AntennaMap, char: Char, resonant: Boolean = false): Set[Location] = {
     m.nodes
       .getOrElse(char, Set())
       .toSeq
       .combinations(2)
-      .flatMap(locs => antinodesFor(locs(0), locs(1), m.farCorner))
+      .flatMap(locs => antinodesFor(locs(0), locs(1), m.farCorner, resonant))
       .toSet
   }
 
-  def antinodesFor(l1: Location, l2: Location, farCorner: Location): List[Location] = {
+  def antinodesFor(l1: Location, l2: Location, farCorner: Location, resonant: Boolean): List[Location] = {
     val rDiff = l2.r - l1.r
     val cDiff = l2.c - l1.c
     val back = List.unfold(l1)(loc => {
@@ -75,14 +75,16 @@ object Day_8 extends Day {
         Some(loc, nextLocation)
       else None
     })
-    val filtered = (back ++ forth)
-      .filter(loc => loc != l1 && loc != l2)
-      .filter(loc => {
-        val l1Dist = l1.minus(loc.r, loc.c)
-        val l2Dist = l2.minus(loc.r, loc.c)
-        l1Dist.scale(l2Dist) == Some(2) || l2Dist.scale(l1Dist) == Some(2)
-      })
-    filtered
+    if !resonant then
+      (back ++ forth)
+        .filter(loc => loc != l1 && loc != l2)
+        .filter(loc => {
+          val l1Dist = l1.minus(loc.r, loc.c)
+          val l2Dist = l2.minus(loc.r, loc.c)
+          l1Dist.scale(l2Dist) == Some(2) || l2Dist.scale(l1Dist) == Some(2)
+        })
+    else
+      (back ++ forth)
   }
 
 
@@ -122,6 +124,12 @@ object Day_8 extends Day {
   override def part1: Unit = {
     val m = Parsing.parse(Utils.readDailyResourceIntoString(8))
     val ans = m.nodes.keySet.flatMap(c => antinodes(m, c)).toSet
+    println(s"Found ${ans.size} unique antinodes")
+  }
+
+  override def part2: Unit = {
+    val m = Parsing.parse(Utils.readDailyResourceIntoString(8))
+    val ans = m.nodes.keySet.flatMap(c => antinodes(m, c, true)).toSet
     println(s"Found ${ans.size} unique antinodes")
   }
 }
