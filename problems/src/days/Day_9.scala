@@ -3,7 +3,6 @@ package days
 import model.Day
 import model.Utils
 import scala.collection.mutable.ArrayBuffer
-import fastparse.internal.Util
 import days.Day_9.Block.Empty
 
 case object Day_9 extends Day {
