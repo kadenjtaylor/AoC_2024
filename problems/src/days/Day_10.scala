@@ -1,6 +1,10 @@
 package days
 
 import model.Day
+import scala.util.Try
+import scala.util.Failure
+import scala.util.Success
+import model.Utils
 
 case object Day_10 extends Day {
 
@@ -8,6 +12,23 @@ case object Day_10 extends Day {
                               |1234
                               |8765
                               |9876""".stripMargin
+
+  private val twoTrailsExample = """...0...
+                                   |...1...
+                                   |...2...
+                                   |6543456
+                                   |7.....7
+                                   |8.....8
+                                   |9.....9""".stripMargin
+
+  private val largerExample = """89010123
+                                |78121874
+                                |87430965
+                                |96549874
+                                |45678903
+                                |32019012
+                                |01329801
+                                |10456732""".stripMargin
 
   case class Location(r: Int, c: Int) {
     override def toString(): String = s"($r, $c)"
@@ -35,13 +56,23 @@ case object Day_10 extends Day {
               case _                                            => None
           )
 
+    def extend(trail: List[Location]): List[List[Location]] =
+      trail.lastOption match
+        case None       => List()
+        case Some(last) => stepsFrom(last).map(step => trail :+ step)
+
     def allTrails() =
       var trails = trailheads().map(List(_)).toList
-      var done     = false
-      while (!done) {
-        // TODO: Grow each list where possible (branching)
-        // Stop condition is that each trail is terminated at a 9
+      var done   = false
+      Range(0, 9).foreach { _ =>
+        trails = trails.flatMap(extend(_))
       }
+      trails
+
+    def trailheadScores() =
+      allTrails()
+        .groupBy(trail => trail.head)
+        .map((loc, trails) => (loc, trails.groupBy(_.last).size))
   }
 
   object TopographicalMap {
@@ -53,7 +84,10 @@ case object Day_10 extends Day {
               .toCharArray()
               .zipWithIndex
               .map((heightChar, c) => {
-                (Location(r, c), heightChar.toString().toInt)
+                val num = Try(heightChar.toString().toInt) match
+                  case Failure(exception) => -1
+                  case Success(value)     => value
+                (Location(r, c), num)
               })
           )
           .toMap
@@ -62,13 +96,19 @@ case object Day_10 extends Day {
   }
 
   override def example: Unit = {
-    val terrain    = TopographicalMap.parse(exampleData)
+    val terrain    = TopographicalMap.parse(largerExample)
     val trailheads = terrain.trailheads()
-    println(exampleData)
-    println(s"trailheads at:")
-    trailheads.foreach(loc =>
-      println(s"Trailhead: $loc => [${terrain.stepsFrom(loc).mkString(", ")}]")
-    )
+    val scoreMap   = terrain.trailheadScores()
+    val total      = scoreMap.values.sum
+    println(total)
+  }
+
+  override def part1: Unit = {
+    val terrain    = TopographicalMap.parse(Utils.readDailyResourceIntoString(10))
+    val trailheads = terrain.trailheads()
+    val scoreMap   = terrain.trailheadScores()
+    val total      = scoreMap.values.sum
+    println(total)
   }
 
 }
