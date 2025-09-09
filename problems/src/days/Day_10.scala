@@ -73,6 +73,11 @@ case object Day_10 extends Day {
       allTrails()
         .groupBy(trail => trail.head)
         .map((loc, trails) => (loc, trails.groupBy(_.last).size))
+
+    def trailheadRatings() =
+      allTrails()
+        .groupBy(trail => trail.head)
+        .map((loc, trails) => (loc, trails.size))
   }
 
   object TopographicalMap {
@@ -107,6 +112,14 @@ case object Day_10 extends Day {
     val terrain    = TopographicalMap.parse(Utils.readDailyResourceIntoString(10))
     val trailheads = terrain.trailheads()
     val scoreMap   = terrain.trailheadScores()
+    val total      = scoreMap.values.sum
+    println(total)
+  }
+
+  override def part2: Unit = {
+    val terrain    = TopographicalMap.parse(Utils.readDailyResourceIntoString(10))
+    val trailheads = terrain.trailheads()
+    val scoreMap   = terrain.trailheadRatings()
     val total      = scoreMap.values.sum
     println(total)
   }
