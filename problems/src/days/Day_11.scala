@@ -3,6 +3,7 @@ package days
 import model.Day
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
+import model.Utils
 
 case object Day_11 extends Day {
 
@@ -51,6 +52,12 @@ case object Day_11 extends Day {
 
   override def example: Unit = {
     val stones = StoneLine.parse(workedExample)
+    stones.blink(25)
+    println(stones.arr.length)
+  }
+
+  override def part1: Unit = {
+    val stones = StoneLine.parse(Utils.readDailyResourceIntoString(11))
     stones.blink(25)
     println(stones.arr.length)
   }
