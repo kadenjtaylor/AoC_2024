@@ -4,6 +4,9 @@ import model.Day
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import model.Utils
+import scala.collection.mutable.Queue
+import scala.collection.mutable.Map
+import scala.annotation.tailrec
 
 case object Day_11 extends Day {
 
@@ -60,5 +63,65 @@ case object Day_11 extends Day {
     val stones = StoneLine.parse(Utils.readDailyResourceIntoString(11))
     stones.blink(25)
     println(stones.arr.length)
+  }
+
+  // ======================================================================= //
+
+  def updates(num: Long): (Long, Long) | Long =
+    if (num == 0) {
+      1L
+    } else if (num.toString().length() % 2 == 0) {
+      val digits          = num.toString()
+      val (first, second) = digits.splitAt(digits.length() / 2)
+      (first.toLong, second.toLong)
+    } else {
+      num * 2024
+    }
+
+  def rip(data: Array[(Long, Int)]) = {
+    // Mutable resources
+    val q     = Queue(data*)
+    val cache = Map[Long, Long | (Long, Long)]()
+    var count = 0L
+
+    q.dequeueWhile { (num, times) =>
+      if (times == 0) {
+        count = count + 1
+      } else {
+        cache.get(num) match
+          case Some((left: Long, right: Long)) => {
+            q.enqueue((left, times - 1))
+            q.enqueue((right, times - 1))
+          }
+          case Some(n: Long) => {
+            q.enqueue((n, times - 1))
+          }
+          case None => {
+            val us = updates(num)
+            cache.put(num, us)
+            us match
+              case (a: Long, b: Long) => {
+                q.enqueue((a, times - 1))
+                q.enqueue((b, times - 1))
+              }
+              case i: Long => {
+                q.enqueue((i, times - 1))
+              }
+          }
+      }
+
+      true
+    }
+    count
+  }
+
+  override def part2: Unit = {
+    val data = Utils
+      .readDailyResourceIntoString(11)
+      .split(" ")
+      .map(n => (n.toLong, 25))
+
+    val c = rip(data)
+    println(c)
   }
 }
