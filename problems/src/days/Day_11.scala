@@ -4,7 +4,6 @@ import model.Day
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import model.Utils
-import scala.collection.mutable.Stack
 
 case object Day_11 extends Day {
 
@@ -65,6 +64,7 @@ case object Day_11 extends Day {
 
   // ====================================================================== //
 
+  import scala.collection.mutable.Stack
   import scala.collection.mutable.Map
 
   enum Frame:
@@ -73,50 +73,59 @@ case object Day_11 extends Day {
 
   import days.Day_11.Frame.*
 
-  override def part2: Unit =
-    val times = 25
-
-    val cheaterData = List(Calculate(10, 2))
-
-    def oneStep(s: Stack[Frame], c: Map[(Long, Int), Long]): Unit = {
-      val f = s.pop()
-      f match
-        case Calculate(num, 0) => {
-          // println(s"($num, 0) -> 1")
-          c.put((num, 0), 1)
-        }
-        case Calculate(0, times) => {
-          // println(s"(0, $times) -> (1, ${times - 1})")
-          s.push(Equals((0, times), List((1, times - 1))))
-          s.push(Calculate(1, times - 1))
-        }
-        case Calculate(num, times) => {
-          if (num.toString().length() % 2 == 0) {
-            val digits = num.toString()
-            val (l, r) = digits.splitAt(digits.length() / 2)
-            // println(s"($num, $times) -> [($l, ${times - 1}), ($r, ${times - 1})]")
-            s.push(Equals((num, times), List((l.toLong, times - 1), (r.toLong, times - 1))))
-            s.push(Calculate(l.toLong, times - 1))
-            s.push(Calculate(r.toLong, times - 1))
-          } else {
-            // println(s"($num, $times) -> (${num * 2024}, ${times - 1})")
-            s.push(Equals((num, times), List((num * 2024, times - 1))))
-            s.push(Calculate(num * 2024, times - 1))
-          }
-        }
-        case Equals(in, out) => {
-          // println(s"$in = ${out.mkString(" + ")}")
-          val total = out.map(el => c(el)).sum
-          c.put(in, total)
-        }
+  def updates(num: Long): (Long, Long) | Long = {
+    if (num == 0) {
+      1
+    } else if (num.toString().length() % 2 == 0) {
+      val digits = num.toString()
+      val (l, r) = digits.splitAt(digits.length() / 2)
+      (l.toLong, r.toLong)
+    } else {
+      num * 2024
     }
+  }
 
-    val m = Map[(Long, Int), Long]()
+  def oneStep(s: Stack[Frame], c: Map[(Long, Int), Long]): Unit = {
+    val f = s.pop()
+    f match
+      case Calculate(num, 0) => {
+        // println(s"($num, 0) -> 1")
+        c.put((num, 0), 1)
+      }
+      case Calculate(num, times) => {
+        // println(s"${c.get((num, times))}")
+        c.get((num, times)) match
+          case Some(_) => {
+            // println(s"Skipping ${(num, times)} - it's cached already")
+          }
+          case None => {
+            val us = updates(num)
+            us match
+              case (l: Long, r: Long) => {
+                s.push(Equals((num, times), List((l, times - 1), (r, times - 1))))
+                s.push(Calculate(l, times - 1))
+                s.push(Calculate(r, times - 1))
+              }
+              case i: Long => {
+                s.push(Equals((num, times), List((i, times - 1))))
+                s.push(Calculate(i, times - 1))
+              }
+          }
+      }
+      case Equals(in, out) => {
+        // println(s"$in = ${out.mkString(" + ")}")
+        val total = out.map(el => c(el)).sum
+        c.put(in, total)
+      }
+  }
+
+  override def part2: Unit =
+    val start = System.currentTimeMillis()
+    val m     = Map[(Long, Int), Long]()
     val data = Utils
       .readDailyResourceIntoString(11)
       .split(" ")
-      .map(n => (n.toLong, 35))
-    // println(s"Beginning with:  ${data.mkString(", ")}")
+      .map(n => (n.toLong, 75))
 
     val s = Stack[Frame]()
     s.push(Equals((-1L, -1), data.toList))
@@ -125,6 +134,8 @@ case object Day_11 extends Day {
     while (!s.isEmpty) {
       oneStep(s, m)
     }
+    val end = System.currentTimeMillis()
+    println(s"Time: ${(end - start)} ms / Blink Cache: ${m.size}")
     println(m.get((-1, -1)).get)
 
 }
