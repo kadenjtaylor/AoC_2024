@@ -4,6 +4,7 @@ import model.Day
 import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import model.Utils
+import scala.collection.mutable.Stack
 
 case object Day_11 extends Day {
 
@@ -61,4 +62,69 @@ case object Day_11 extends Day {
     stones.blink(25)
     println(stones.arr.length)
   }
+
+  // ====================================================================== //
+
+  import scala.collection.mutable.Map
+
+  enum Frame:
+    case Calculate(num: Long, times: Int)
+    case Equals(in: (Long, Int), out: List[(Long, Int)])
+
+  import days.Day_11.Frame.*
+
+  override def part2: Unit =
+    val times = 25
+
+    val cheaterData = List(Calculate(10, 2))
+
+    def oneStep(s: Stack[Frame], c: Map[(Long, Int), Long]): Unit = {
+      val f = s.pop()
+      f match
+        case Calculate(num, 0) => {
+          // println(s"($num, 0) -> 1")
+          c.put((num, 0), 1)
+        }
+        case Calculate(0, times) => {
+          // println(s"(0, $times) -> (1, ${times - 1})")
+          s.push(Equals((0, times), List((1, times - 1))))
+          s.push(Calculate(1, times - 1))
+        }
+        case Calculate(num, times) => {
+          if (num.toString().length() % 2 == 0) {
+            val digits = num.toString()
+            val (l, r) = digits.splitAt(digits.length() / 2)
+            // println(s"($num, $times) -> [($l, ${times - 1}), ($r, ${times - 1})]")
+            s.push(Equals((num, times), List((l.toLong, times - 1), (r.toLong, times - 1))))
+            s.push(Calculate(l.toLong, times - 1))
+            s.push(Calculate(r.toLong, times - 1))
+          } else {
+            // println(s"($num, $times) -> (${num * 2024}, ${times - 1})")
+            s.push(Equals((num, times), List((num * 2024, times - 1))))
+            s.push(Calculate(num * 2024, times - 1))
+          }
+        }
+        case Equals(in, out) => {
+          // println(s"$in = ${out.mkString(" + ")}")
+          val total = out.map(el => c(el)).sum
+          c.put(in, total)
+        }
+    }
+
+    val m = Map[(Long, Int), Long]()
+    val data = Utils
+      .readDailyResourceIntoString(11)
+      .split(" ")
+      .map(n => (n.toLong, 35))
+    // println(s"Beginning with:  ${data.mkString(", ")}")
+
+    val s = Stack[Frame]()
+    s.push(Equals((-1L, -1), data.toList))
+    data.reverse.foreach((num, times) => s.push(Calculate(num, times)))
+
+    while (!s.isEmpty) {
+      oneStep(s, m)
+    }
+    println(m.get((-1, -1)).get)
+
 }
