@@ -2,6 +2,7 @@ package days
 
 import model.Day
 import scala.collection.mutable.Map
+import model.Utils
 
 case object Day_12 extends Day {
 
@@ -55,9 +56,18 @@ case object Day_12 extends Day {
     def area: Int =
       plots.size
 
-    def perimeter: Int = ???
+    def perimeter: Int = {
+      val directions = List((1, 0), (-1, 0), (0, 1), (0, -1))
+      val borders = plots.toList
+        .flatMap(p => directions.map((x, y) => Plot(p.r + x, p.c + y)))
+      val outsideBorders = borders.filter(p => !plots.contains(p))
+      outsideBorders.size
+    }
 
     def price: Int = area * perimeter
+
+    def priceDescription(): String =
+      s"A region of $char plants with price $area * $perimeter = $price"
   }
 
   def belongsTo(char: Char, row: Int, col: Int, regions: Map[Int, Region]): List[Int] = {
@@ -85,6 +95,10 @@ case object Day_12 extends Day {
         .mkString("\n")
 
     def price: Int = regions.map((_, r) => r.price).sum
+
+    def priceDescription(): String =
+      regions.map((i, r) => s"- ${r.priceDescription()}").mkString("\n") +
+        "\n\n" + s"So it has a total price of $price"
   }
 
   object Farm {
@@ -130,4 +144,8 @@ case object Day_12 extends Day {
     val farm = Farm.parse(biggerExample)
     println(farm.price)
   }
+
+  override def part1: Unit =
+    val farm = Farm.parse(Utils.readDailyResourceIntoString(12))
+    println(farm.price)
 }
