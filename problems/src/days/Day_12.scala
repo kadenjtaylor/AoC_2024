@@ -28,11 +28,86 @@ case object Day_12 extends Day {
                                 |MIIISIJEEE
                                 |MMMISSJEEE""".stripMargin
 
+  private val eShaped = """EEEEE
+                          |EXXXX
+                          |EEEEE
+                          |EXXXX
+                          |EEEEE""".stripMargin
+
+  private val abba = """AAAAAA
+                       |AAABBA
+                       |AAABBA
+                       |ABBAAA
+                       |ABBAAA
+                       |AAAAAA""".stripMargin
+
+  trait EdgeAPI {
+    def r: Int
+    def c: Int
+    def length: Int
+    def isVertical: Boolean
+    def merge(other: Edge): Option[Edge]
+  }
+
+  enum Direction:
+    case Down, Right
+
+  enum ExtraDir:
+    case Down(left: Char, right: Char)
+    case Right(above: Char, below: Char)
+
+  enum EdgeData:
+    case SingleSegment(dir: ExtraDir)
+    case MultiLengthSegment(length: Int, dir: Direction)
+
+  import Direction.*
+
+  case class Edge(r: Int, c: Int, length: Int, dir: Direction) {
+    // Note: Does not handle overlapping
+    def merge(other: Edge): Option[Edge] = {
+      val result = (this, other) match
+        case (Edge(ar, ac, aLength, Down), Edge(br, bc, bLength, Down))
+            if ac == bc && ar + aLength == br => {
+          Some(Edge(ar, ac, aLength + bLength, Down))
+        }
+        case (Edge(ar, ac, aLength, Down), Edge(br, bc, bLength, Down))
+            if ac == bc && br + bLength == ar => {
+          Some(Edge(br, bc, aLength + bLength, Down))
+        }
+        case (Edge(ar, ac, aLength, Right), Edge(br, bc, bLength, Right))
+            if ar == br && bc + bLength == ac => {
+          Some(Edge(ar, bc, bLength + aLength, Right))
+        }
+        case (Edge(ar, ac, aLength, Right), Edge(br, bc, bLength, Right))
+            if ar == br && ac + aLength == bc => {
+          Some(Edge(ar, ac, bLength + aLength, Right))
+        }
+        case _ => None
+      println(s"${dir}($r, $c) <> ${other.dir}(${other.r}, ${other.c}) => $result")
+      result
+    }
+  }
+
+  import Edge.*
+
   case class Plot(r: Int, c: Int) {
     def borders(row: Int, col: Int): Boolean =
       Math.abs(row - r) + Math.abs(col - c) == 1
 
-    override def toString(): String = s"($r, $c)"
+    override def toString(): String =
+      s"($r, $c)"
+
+    def up: (Edge, Plot) =
+      (Edge(r, c, 1, Right), Plot(r - 1, c))
+
+    def down: (Edge, Plot) =
+      (Edge(r + 1, c, 1, Right), Plot(r + 1, c))
+
+    def left: (Edge, Plot) =
+      (Edge(r, c, 1, Down), Plot(r, c - 1))
+
+    def right: (Edge, Plot) =
+      (Edge(r, c + 1, 1, Down), Plot(r, c + 1))
   }
 
   case class Region(char: Char, plots: Set[Plot]) {
@@ -56,15 +131,46 @@ case object Day_12 extends Day {
     def area: Int =
       plots.size
 
-    def perimeter: Int = {
-      val directions = List((1, 0), (-1, 0), (0, 1), (0, -1))
-      val borders = plots.toList
-        .flatMap(p => directions.map((x, y) => Plot(p.r + x, p.c + y)))
-      val outsideBorders = borders.filter(p => !plots.contains(p))
-      outsideBorders.size
+    def perimeter: Int =
+      edges.size
+
+    def edges: List[Edge] =
+      plots.toList
+        .flatMap(p => List(p.up, p.down, p.left, p.right))
+        .filter((_, p) => !plots.contains(p))
+        .map((e, p) => e)
+
+    def sides: List[Edge] = {
+      val (vertical, horizontal) = edges.partition(e => e.dir == Down)
+      def foldMerge(es: List[Edge]) = {
+        val mergedSides = es.foldLeft((List[Edge](), None: Option[Edge]))((pkg, side) => {
+          val (sides, next) = pkg
+          (next, side) match
+            case (None, s) => (sides, Some(s))
+            case (Some(e1), e2) => {
+              val mergeResult = e1.merge(e2)
+              mergeResult match
+                case Some(merged) => (sides, Some(merged))
+                case None         => (sides :+ e1, Some(e2))
+            }
+        })
+        mergedSides._1 ++ mergedSides._2
+      }
+      var vertSides = vertical
+        .groupBy(e => e.c)
+        .map((i, es) => (i, foldMerge(es.sortBy(e => e.r))))
+      val horizSides = horizontal
+        .groupBy(e => e.r)
+        .map((i, es) => (i, foldMerge(es.sortBy(e => e.c))))
+      (vertSides.values.flatten ++ horizSides.values.flatten).toList
     }
 
     def price: Int = area * perimeter
+
+    def bulkPrice() = area * sides.length
+
+    def bulkPriceDescription(): String =
+      s"A region of $char plants with price $area (area) * ${sides.length} (sides) = ${bulkPrice()}"
 
     def priceDescription(): String =
       s"A region of $char plants with price $area * $perimeter = $price"
@@ -78,7 +184,7 @@ case object Day_12 extends Day {
       .toList
   }
 
-  case class Farm(private val regions: Map[Int, Region]) {
+  case class Farm(regions: Map[Int, Region]) {
     def size: Int =
       regions.map((_, r) => r.plots.size).sum
 
@@ -96,9 +202,15 @@ case object Day_12 extends Day {
 
     def price: Int = regions.map((_, r) => r.price).sum
 
+    def bulkPrice(): Int = regions.map((_, r) => r.bulkPrice()).sum
+
     def priceDescription(): String =
       regions.map((i, r) => s"- ${r.priceDescription()}").mkString("\n") +
         "\n\n" + s"So it has a total price of $price"
+
+    def bulkPriceDescription(): String =
+      regions.map((i, r) => s"- ${r.bulkPriceDescription()}").mkString("\n") +
+        "\n\n" + s"So it has a total price of ${bulkPrice()}"
   }
 
   object Farm {
@@ -148,4 +260,9 @@ case object Day_12 extends Day {
   override def part1: Unit =
     val farm = Farm.parse(Utils.readDailyResourceIntoString(12))
     println(farm.price)
+
+  override def part2: Unit =
+    println(abba)
+    val farm = Farm.parse(abba)
+    println(farm.bulkPriceDescription())
 }
