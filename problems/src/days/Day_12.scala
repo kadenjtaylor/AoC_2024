@@ -46,7 +46,16 @@ case object Day_12 extends Day {
     def borders(row: Int, col: Int): Boolean =
       Math.abs(row - r) + Math.abs(col - c) == 1
 
-    override def toString(): String = s"($r, $c)"
+    def up: Plot = Plot(r - 1, c)
+
+    def down: Plot = Plot(r + 1, c)
+
+    def left: Plot = Plot(r, c - 1)
+
+    def right: Plot = Plot(r, c + 1)
+
+    override def toString(): String =
+      s"($r, $c)"
   }
 
   case class Region(char: Char, plots: Set[Plot]) {
@@ -86,13 +95,11 @@ case object Day_12 extends Day {
     def area: Int =
       plots.size
 
-    def perimeter: Int = {
-      val directions = List((1, 0), (-1, 0), (0, 1), (0, -1))
-      val borders = plots.toList
-        .flatMap(p => directions.map((x, y) => Plot(p.r + x, p.c + y)))
-      val outsideBorders = borders.filter(p => !plots.contains(p))
-      outsideBorders.size
-    }
+    def perimeter: Int =
+      plots.toList
+        .flatMap(p => List(p.up, p.down, p.left, p.right))
+        .filter(p => !plots.contains(p))
+        .size
 
     def price: Int = area * perimeter
 
@@ -125,6 +132,73 @@ case object Day_12 extends Day {
         .mkString("\n")
 
     def price: Int = regions.map((_, r) => r.price).sum
+
+    def bulkPriceDescription(): String =
+      regions
+        .map((i, r) => {
+          val rSides    = sides((r.char, i)).length
+          val bulkPrice = r.area * rSides
+          s"A region of ${r.char} plants with price ${r.area}area (area) * ${rSides} (sides) = ${bulkPrice}"
+        })
+        .mkString("\n") +
+        "\n\n" + s"So it has a total price of ${bulkPrice()}"
+
+    def bulkPrice(): Int = regions.map((i, r) => r.area * sides((r.char, i)).length).sum
+
+    def upFrom(r: Int, c: Int): (Edge, Plot) =
+      (Edge(r, c, SingleSegment(ExtraDir.Right(???, ???))), Plot(r - 1, c))
+
+    def downFrom(r: Int, c: Int): (Edge, Plot) =
+      (Edge(r + 1, c, SingleSegment(ExtraDir.Right(???, ???))), Plot(r + 1, c))
+
+    def leftFrom(r: Int, c: Int): (Edge, Plot) =
+      (Edge(r, c, SingleSegment(ExtraDir.Down(???, ???))), Plot(r, c - 1))
+
+    def rightFrom(r: Int, c: Int): (Edge, Plot) =
+      (Edge(r, c + 1, SingleSegment(ExtraDir.Down(???, ???))), Plot(r, c + 1))
+
+    def edges: Map[Int, List[Edge]] =
+      regions
+        .map((i, r) => {
+          val currentPlots = r.plots.toList
+          val result = currentPlots
+            .flatMap(p =>
+              List(upFrom(p.r, p.c), downFrom(p.r, p.c), leftFrom(p.r, p.c), rightFrom(p.r, p.c))
+            )
+            .filter((_, p) => !currentPlots.contains(p))
+            .map((e, p) => e)
+          (i, result)
+        })
+
+    def sides: Map[(Char, Int), List[Edge]] = {
+      def foldMerge(es: List[Edge]) = {
+        val mergedSides = es.foldLeft((List[Edge](), None: Option[Edge]))((pkg, side) => {
+          val (sides, next) = pkg
+          (next, side) match
+            case (None, s) => (sides, Some(s))
+            case (Some(e1), e2) => {
+              val mergeResult = e1.merge(e2)
+              mergeResult match
+                case Some(merged) => (sides, Some(merged))
+                case None         => (sides :+ e1, Some(e2))
+            }
+        })
+        mergedSides._1 ++ mergedSides._2
+      }
+      edges.map((i, rEdges) => {
+        val resultSides = {
+          val (vertical, horizontal) = rEdges.partition(e => e.data.dir == Direction.Down)
+          var vertSides = vertical
+            .groupBy(e => e.c)
+            .map((i, es) => (i, foldMerge(es.sortBy(e => e.r))))
+          val horizSides = horizontal
+            .groupBy(e => e.r)
+            .map((i, es) => (i, foldMerge(es.sortBy(e => e.c))))
+          (vertSides.values.flatten ++ horizSides.values.flatten).toList
+        }
+        ((regions(i).char, i), resultSides)
+      })
+    }
 
     def priceDescription(): String =
       regions.map((i, r) => s"- ${r.priceDescription()}").mkString("\n") +
