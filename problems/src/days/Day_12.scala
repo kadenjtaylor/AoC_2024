@@ -3,6 +3,7 @@ package days
 import model.Day
 import scala.collection.mutable.Map
 import model.Utils
+import scala.collection.mutable.Queue
 
 case object Day_12 extends Day {
 
@@ -28,6 +29,19 @@ case object Day_12 extends Day {
                                 |MIIISIJEEE
                                 |MMMISSJEEE""".stripMargin
 
+  private val abbaExample = """AAAAAA
+                              |AAABBA
+                              |AAABBA
+                              |ABBAAA
+                              |ABBAAA
+                              |AAAAAA""".stripMargin
+
+  private val largeEExample = """EEEEE
+                                |EXXXX
+                                |EEEEE
+                                |EXXXX
+                                |EEEEE""".stripMargin
+
   case class Plot(r: Int, c: Int) {
     def borders(row: Int, col: Int): Boolean =
       Math.abs(row - r) + Math.abs(col - c) == 1
@@ -51,6 +65,22 @@ case object Day_12 extends Day {
 
     def borders(row: Int, col: Int): Boolean = {
       plots.map(p => p.borders(row, col)).reduce(_ || _)
+    }
+
+    def edges() = {
+      plots.toList
+        .flatMap(p =>
+          List(
+            Edge(p.r, p.c, p.r + 1, p.c),         // left
+            Edge(p.r, p.c, p.r, p.c + 1),         // top
+            Edge(p.r, p.c + 1, p.r + 1, p.c + 1), // right
+            Edge(p.r + 1, p.c, p.r + 1, p.c + 1)  // bottom
+          )
+        )
+        .groupBy(e => e)
+        .map((e, es) => (e, es.size))
+        .filter((e, count) => count == 1)
+        .keySet
     }
 
     def area: Int =
@@ -78,7 +108,7 @@ case object Day_12 extends Day {
       .toList
   }
 
-  case class Farm(private val regions: Map[Int, Region]) {
+  case class Farm(regions: Map[Int, Region]) {
     def size: Int =
       regions.map((_, r) => r.plots.size).sum
 
@@ -99,6 +129,18 @@ case object Day_12 extends Day {
     def priceDescription(): String =
       regions.map((i, r) => s"- ${r.priceDescription()}").mkString("\n") +
         "\n\n" + s"So it has a total price of $price"
+
+    def orthoSplit(edgeMeetingPoint: (Int, Int)) =
+      // println(s"Check Split for $edgeMeetingPoint")
+      val (r, c) = edgeMeetingPoint
+      val nw     = region(r - 1, c - 1)
+      val ne     = region(r - 1, c)
+      val sw     = region(r, c - 1)
+      val se     = region(r, c)
+      // println(s"$nw | $ne")
+      // println(s"$sw | $se")
+      // println(s"-----------------------")
+      nw == sw || nw == ne || ne == se || se == sw
   }
 
   object Farm {
@@ -148,4 +190,101 @@ case object Day_12 extends Day {
   override def part1: Unit =
     val farm = Farm.parse(Utils.readDailyResourceIntoString(12))
     println(farm.price)
+
+  // ======================================================================= //
+
+  case class Edge(startR: Int, startC: Int, endR: Int, endC: Int) {
+    def connectsAt(other: Edge): Option[(Int, Int)] =
+      if (startR == other.endR && startC == other.endC) {
+        Some((startR, startC)) // connected at my start point
+      } else if (endR == other.startR && endC == other.startC) {
+        Some((endR, endC)) // connected at my endpoint
+      } else {
+        None
+      }
+
+    def sameOrientation(other: Edge) =
+      (startR == endR && other.startR == other.endR) ||
+        (startC == endC && other.startC == other.endC)
+
+    def isVertical = startC == endC
+
+    def merge(other: Edge, farm: Farm): Option[Edge] = {
+      if (sameOrientation(other)) {
+        connectsAt(other) match
+          case Some((connectR, connectC))
+              if farm.orthoSplit(connectR, connectC) && connectR == startR && connectC == startC =>
+            Some(Edge(other.startR, other.startC, endR, endC))
+          case Some((connectR, connectC)) if farm.orthoSplit(connectR, connectC) =>
+            Some(Edge(startR, startC, other.endR, other.endC))
+          case _ => None
+
+      } else {
+        None
+      }
+    }
+  }
+
+  def cleave[A](l: List[A]): Option[(A, List[A])] = {
+    if l.isEmpty then None
+    else Some((l(0), l.tail))
+  }
+
+  def combine(farm: Farm, edges: Set[Edge]): Set[Edge] = {
+    var done      = false
+    var edgeNum   = 0
+    var sides     = Map[Int, Edge]()
+    val edgeQueue = Queue(edges.toSeq*)
+    while (!edgeQueue.isEmpty) {
+      val currentEdge = edgeQueue.dequeue()
+      val (matches, others) = sides.partition((i, e) => {
+        currentEdge.connectsAt(e) match
+          case Some((r, c)) if currentEdge.sameOrientation(e) && farm.orthoSplit(r, c) => true
+          case _                                                                       => false
+      })
+      if matches.isEmpty then
+        // println(s"No matches - adding to map")
+        sides.put(edgeNum, currentEdge)
+        edgeNum += 1
+      else if matches.size == 1 then
+        // println(s"Exactly one match - merging the two under the existing key")
+        matches.updateWith(matches.head._1)(_ match {
+          case Some(matchingEdge) => currentEdge.merge(matchingEdge, farm)
+          case _                  => None
+        })
+        sides = others ++ matches
+      else
+        // println(s"Multiple matches - merging into the first one, re-queuing the remainders")
+        val (chosenMatch, rest) = matches.splitAt(1)
+        chosenMatch.updateWith(matches.head._1)(_ match {
+          case Some(matchingEdge) => currentEdge.merge(matchingEdge, farm)
+          case _                  => None
+        })
+        sides = others ++ chosenMatch
+        rest.values.foreach(bummer => edgeQueue.enqueue(bummer))
+    }
+    sides.values.toSet
+  }
+
+  def bulkPricing(f: Farm) = {
+    var total = 0
+    f.regions.foreach((i, r) => {
+      val edges = r.edges()
+      // println(s"Region ${r.char}-$i has ${edges.size} edges")
+      val sides = combine(f, edges)
+      // println(s"Region ${r.char}-$i has ${sides.size} sides")
+      val bulkPrice = r.area * sides.size
+      total += bulkPrice
+      // println(s"Region ${r.char}-$i: ${r.area} area * ${sides.size} sides = $bulkPrice")
+    })
+    println(s"Total Bulk Price: $total")
+  }
+  override def part2: Unit = {
+    def run(s: String) = {
+      // println(s)
+      val farm = Farm.parse(s)
+      bulkPricing(farm)
+    }
+    run(Utils.readDailyResourceIntoString(12))
+  }
 }
