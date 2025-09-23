@@ -3,6 +3,7 @@ package days
 import model.Day
 import scala.collection.mutable.Map
 import model.Utils
+import scala.collection.mutable.Queue
 
 case object Day_12 extends Day {
 
@@ -28,76 +29,18 @@ case object Day_12 extends Day {
                                 |MIIISIJEEE
                                 |MMMISSJEEE""".stripMargin
 
-  private val eShaped = """EEEEE
-                          |EXXXX
-                          |EEEEE
-                          |EXXXX
-                          |EEEEE""".stripMargin
+  private val abbaExample = """AAAAAA
+                              |AAABBA
+                              |AAABBA
+                              |ABBAAA
+                              |ABBAAA
+                              |AAAAAA""".stripMargin
 
-  private val abba = """AAAAAA
-                       |AAABBA
-                       |AAABBA
-                       |ABBAAA
-                       |ABBAAA
-                       |AAAAAA""".stripMargin
-
-  trait EdgeAPI {
-    def r: Int
-    def c: Int
-    def length: Int
-    def isVertical: Boolean
-    def merge(other: Edge): Option[Edge]
-  }
-
-  enum Direction:
-    case Down, Right
-
-  enum ExtraDir:
-    case Down(left: Char, right: Char)
-    case Right(above: Char, below: Char)
-
-  trait Directed:
-    def dir: Direction
-
-  enum EdgeData extends Directed:
-    case SingleSegment(ex: ExtraDir)
-    case MultiLengthSegment(length: Int, d: Direction)
-
-    def dir: Direction = this match
-      case SingleSegment(ExtraDir.Down(_, _))  => Direction.Down
-      case SingleSegment(ExtraDir.Right(_, _)) => Direction.Right
-      case MultiLengthSegment(_, dir)          => dir
-
-  import Direction.*
-
-  case class Edge(r: Int, c: Int, data: EdgeData) {
-    // Note: Does not handle overlapping
-    def merge(other: Edge): Option[Edge] = {
-      val result = (this, other) match
-        // case (Edge(ar, ac, aLength, Down), Edge(br, bc, bLength, Down))
-        //     if ac == bc && ar + aLength == br => {
-        //   Some(Edge(ar, ac, aLength + bLength, Down))
-        // }
-        // case (Edge(ar, ac, aLength, Down), Edge(br, bc, bLength, Down))
-        //     if ac == bc && br + bLength == ar => {
-        //   Some(Edge(br, bc, aLength + bLength, Down))
-        // }
-        // case (Edge(ar, ac, aLength, Right), Edge(br, bc, bLength, Right))
-        //     if ar == br && bc + bLength == ac => {
-        //   Some(Edge(ar, bc, bLength + aLength, Right))
-        // }
-        // case (Edge(ar, ac, aLength, Right), Edge(br, bc, bLength, Right))
-        //     if ar == br && ac + aLength == bc => {
-        //   Some(Edge(ar, ac, bLength + aLength, Right))
-        // }
-        case _ => None
-      // println(s"${dir}($r, $c) <> ${other.dir}(${other.r}, ${other.c}) => $result")
-      result
-    }
-  }
-
-  import Edge.*
-  import EdgeData.*
+  private val largeEExample = """EEEEE
+                                |EXXXX
+                                |EEEEE
+                                |EXXXX
+                                |EEEEE""".stripMargin
 
   case class Plot(r: Int, c: Int) {
     def borders(row: Int, col: Int): Boolean =
@@ -131,6 +74,22 @@ case object Day_12 extends Day {
 
     def borders(row: Int, col: Int): Boolean = {
       plots.map(p => p.borders(row, col)).reduce(_ || _)
+    }
+
+    def edges() = {
+      plots.toList
+        .flatMap(p =>
+          List(
+            Edge(p.r, p.c, p.r + 1, p.c),         // left
+            Edge(p.r, p.c, p.r, p.c + 1),         // top
+            Edge(p.r, p.c + 1, p.r + 1, p.c + 1), // right
+            Edge(p.r + 1, p.c, p.r + 1, p.c + 1)  // bottom
+          )
+        )
+        .groupBy(e => e)
+        .map((e, es) => (e, es.size))
+        .filter((e, count) => count == 1)
+        .keySet
     }
 
     def area: Int =
@@ -174,76 +133,21 @@ case object Day_12 extends Day {
 
     def price: Int = regions.map((_, r) => r.price).sum
 
-    def bulkPriceDescription(): String =
-      regions
-        .map((i, r) => {
-          val rSides    = sides((r.char, i)).length
-          val bulkPrice = r.area * rSides
-          s"A region of ${r.char} plants with price ${r.area}area (area) * ${rSides} (sides) = ${bulkPrice}"
-        })
-        .mkString("\n") +
-        "\n\n" + s"So it has a total price of ${bulkPrice()}"
-
-    def bulkPrice(): Int = regions.map((i, r) => r.area * sides((r.char, i)).length).sum
-
-    def upFrom(r: Int, c: Int): (Edge, Plot) =
-      (Edge(r, c, SingleSegment(ExtraDir.Right(???, ???))), Plot(r - 1, c))
-
-    def downFrom(r: Int, c: Int): (Edge, Plot) =
-      (Edge(r + 1, c, SingleSegment(ExtraDir.Right(???, ???))), Plot(r + 1, c))
-
-    def leftFrom(r: Int, c: Int): (Edge, Plot) =
-      (Edge(r, c, SingleSegment(ExtraDir.Down(???, ???))), Plot(r, c - 1))
-
-    def rightFrom(r: Int, c: Int): (Edge, Plot) =
-      (Edge(r, c + 1, SingleSegment(ExtraDir.Down(???, ???))), Plot(r, c + 1))
-
-    def edges: Map[Int, List[Edge]] =
-      regions
-        .map((i, r) => {
-          val currentPlots = r.plots.toList
-          val result = currentPlots
-            .flatMap(p =>
-              List(upFrom(p.r, p.c), downFrom(p.r, p.c), leftFrom(p.r, p.c), rightFrom(p.r, p.c))
-            )
-            .filter((_, p) => !currentPlots.contains(p))
-            .map((e, p) => e)
-          (i, result)
-        })
-
-    def sides: Map[(Char, Int), List[Edge]] = {
-      def foldMerge(es: List[Edge]) = {
-        val mergedSides = es.foldLeft((List[Edge](), None: Option[Edge]))((pkg, side) => {
-          val (sides, next) = pkg
-          (next, side) match
-            case (None, s) => (sides, Some(s))
-            case (Some(e1), e2) => {
-              val mergeResult = e1.merge(e2)
-              mergeResult match
-                case Some(merged) => (sides, Some(merged))
-                case None         => (sides :+ e1, Some(e2))
-            }
-        })
-        mergedSides._1 ++ mergedSides._2
-      }
-      edges.map((i, rEdges) => {
-        val resultSides = {
-          val (vertical, horizontal) = rEdges.partition(e => e.data.dir == Direction.Down)
-          var vertSides = vertical
-            .groupBy(e => e.c)
-            .map((i, es) => (i, foldMerge(es.sortBy(e => e.r))))
-          val horizSides = horizontal
-            .groupBy(e => e.r)
-            .map((i, es) => (i, foldMerge(es.sortBy(e => e.c))))
-          (vertSides.values.flatten ++ horizSides.values.flatten).toList
-        }
-        ((regions(i).char, i), resultSides)
-      })
-    }
-
     def priceDescription(): String =
       regions.map((i, r) => s"- ${r.priceDescription()}").mkString("\n") +
         "\n\n" + s"So it has a total price of $price"
+
+    def orthoSplit(edgeMeetingPoint: (Int, Int)) =
+      // println(s"Check Split for $edgeMeetingPoint")
+      val (r, c) = edgeMeetingPoint
+      val nw     = region(r - 1, c - 1)
+      val ne     = region(r - 1, c)
+      val sw     = region(r, c - 1)
+      val se     = region(r, c)
+      // println(s"$nw | $ne")
+      // println(s"$sw | $se")
+      // println(s"-----------------------")
+      nw == sw || nw == ne || ne == se || se == sw
   }
 
   object Farm {
@@ -294,8 +198,100 @@ case object Day_12 extends Day {
     val farm = Farm.parse(Utils.readDailyResourceIntoString(12))
     println(farm.price)
 
-  override def part2: Unit =
-    println(abba)
-    val farm = Farm.parse(abba)
-    println(farm.bulkPriceDescription())
+  // ======================================================================= //
+
+  case class Edge(startR: Int, startC: Int, endR: Int, endC: Int) {
+    def connectsAt(other: Edge): Option[(Int, Int)] =
+      if (startR == other.endR && startC == other.endC) {
+        Some((startR, startC)) // connected at my start point
+      } else if (endR == other.startR && endC == other.startC) {
+        Some((endR, endC)) // connected at my endpoint
+      } else {
+        None
+      }
+
+    def sameOrientation(other: Edge) =
+      (startR == endR && other.startR == other.endR) ||
+        (startC == endC && other.startC == other.endC)
+
+    def isVertical = startC == endC
+
+    def merge(other: Edge, farm: Farm): Option[Edge] = {
+      if (sameOrientation(other)) {
+        connectsAt(other) match
+          case Some((connectR, connectC))
+              if farm.orthoSplit(connectR, connectC) && connectR == startR && connectC == startC =>
+            Some(Edge(other.startR, other.startC, endR, endC))
+          case Some((connectR, connectC)) if farm.orthoSplit(connectR, connectC) =>
+            Some(Edge(startR, startC, other.endR, other.endC))
+          case _ => None
+
+      } else {
+        None
+      }
+    }
+  }
+
+  def cleave[A](l: List[A]): Option[(A, List[A])] = {
+    if l.isEmpty then None
+    else Some((l(0), l.tail))
+  }
+
+  def combine(farm: Farm, edges: Set[Edge]): Set[Edge] = {
+    var done      = false
+    var edgeNum   = 0
+    var sides     = Map[Int, Edge]()
+    val edgeQueue = Queue(edges.toSeq*)
+    while (!edgeQueue.isEmpty) {
+      val currentEdge = edgeQueue.dequeue()
+      val (matches, others) = sides.partition((i, e) => {
+        currentEdge.connectsAt(e) match
+          case Some((r, c)) if currentEdge.sameOrientation(e) && farm.orthoSplit(r, c) => true
+          case _                                                                       => false
+      })
+      if matches.isEmpty then
+        // println(s"No matches - adding to map")
+        sides.put(edgeNum, currentEdge)
+        edgeNum += 1
+      else if matches.size == 1 then
+        // println(s"Exactly one match - merging the two under the existing key")
+        matches.updateWith(matches.head._1)(_ match {
+          case Some(matchingEdge) => currentEdge.merge(matchingEdge, farm)
+          case _                  => None
+        })
+        sides = others ++ matches
+      else
+        // println(s"Multiple matches - merging into the first one, re-queuing the remainders")
+        val (chosenMatch, rest) = matches.splitAt(1)
+        chosenMatch.updateWith(matches.head._1)(_ match {
+          case Some(matchingEdge) => currentEdge.merge(matchingEdge, farm)
+          case _                  => None
+        })
+        sides = others ++ chosenMatch
+        rest.values.foreach(bummer => edgeQueue.enqueue(bummer))
+    }
+    sides.values.toSet
+  }
+
+  def bulkPricing(f: Farm) = {
+    var total = 0
+    f.regions.foreach((i, r) => {
+      val edges = r.edges()
+      // println(s"Region ${r.char}-$i has ${edges.size} edges")
+      val sides = combine(f, edges)
+      // println(s"Region ${r.char}-$i has ${sides.size} sides")
+      val bulkPrice = r.area * sides.size
+      total += bulkPrice
+      // println(s"Region ${r.char}-$i: ${r.area} area * ${sides.size} sides = $bulkPrice")
+    })
+    println(s"Total Bulk Price: $total")
+  }
+  override def part2: Unit = {
+    def run(s: String) = {
+      // println(s)
+      val farm = Farm.parse(s)
+      bulkPricing(farm)
+    }
+    run(Utils.readDailyResourceIntoString(12))
+  }
 }
