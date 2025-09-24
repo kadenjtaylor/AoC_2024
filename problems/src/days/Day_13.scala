@@ -1,6 +1,7 @@
 package days
 
 import model.Day
+import model.Utils
 
 case object Day_13 extends Day {
 
@@ -71,9 +72,13 @@ case object Day_13 extends Day {
       fastparse.parse(s, machines).get.value
   }
 
-  override def example: Unit = {
+  override def example: Unit =
     val machines = Parsing.parseData(exampleData)
     val result   = machines.flatMap(m => m.dumbSolve()).sum
     println(s"Total Tokens Spent to win all prizes: $result")
-  }
+
+  override def part1: Unit =
+    val machines = Parsing.parseData(Utils.readDailyResourceIntoString(13))
+    val result   = machines.flatMap(m => m.dumbSolve()).sum
+    println(s"Total Tokens Spent to win all prizes: $result")
 }
