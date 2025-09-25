@@ -4,7 +4,7 @@ import model.Day
 import scala.util.Try
 import model.Utils
 
-case object Day_4 extends Day {
+object Day_4 extends Day {
 
   private val exampleData: String = """MMMSXXMASM
                                       |MSAMXMSMSA

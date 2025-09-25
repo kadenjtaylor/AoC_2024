@@ -5,7 +5,7 @@ import scala.collection.mutable.ArrayBuffer
 import scala.util.Try
 import model.Utils
 
-case object Day_11 extends Day {
+object Day_11 extends Day {
 
   private val exampleData = "0 1 10 99 999"
 

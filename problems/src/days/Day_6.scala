@@ -9,7 +9,7 @@ import fastparse.internal.Util
 import scala.util.Failure
 import scala.util.Success
 
-case object Day_6 extends Day {
+object Day_6 extends Day {
 
   private val exampleData = """....#.....
                               |.........#

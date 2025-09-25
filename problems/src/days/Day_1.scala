@@ -4,7 +4,7 @@ import model.Day
 import scala.util.Try
 import model.Utils
 
-case object Day_1 extends Day {
+object Day_1 extends Day {
 
   private def exampleData: String = """3   4
                               |4   3
@@ -30,8 +30,8 @@ case object Day_1 extends Day {
       verbose: Boolean = false
   ) =
     val (l1, l2) = numberLists
-    val runway = l1.sorted.zip(l2.sorted)
-    var sum = 0
+    val runway   = l1.sorted.zip(l2.sorted)
+    var sum      = 0
     runway.foreach((n1, n2) => {
       val diff = Math.abs(n2 - n1)
       if verbose then println(s"$n1, $n2 => $diff") else ()
@@ -54,15 +54,15 @@ case object Day_1 extends Day {
   }
 
   override def part1 =
-    val s = Utils.readDailyResourceIntoString(1)
+    val s   = Utils.readDailyResourceIntoString(1)
     val sum = calculateSortedSumOfDiffs(splitIntoNumberLists(s))
     println(sum)
 
   override def part2 =
-    val s = Utils.readDailyResourceIntoString(1)
+    val s        = Utils.readDailyResourceIntoString(1)
     val (l1, l2) = splitIntoNumberLists(s)
-    val counts = countOccurrences(l1, l2)
-    val sum = counts.values.sum
+    val counts   = countOccurrences(l1, l2)
+    val sum      = counts.values.sum
     println(sum)
 
 }

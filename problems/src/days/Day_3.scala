@@ -7,7 +7,7 @@ import scala.util.Failure
 import scala.util.Success
 import model.Utils
 
-case object Day_3 extends Day {
+object Day_3 extends Day {
 
   private def exampleData: String =
     "xmul(2,4)%&mul[3,7]!@^do_not_mul(5,5)+mul(32,64]then(mul(11,8)mul(8,5))"
@@ -23,7 +23,7 @@ case object Day_3 extends Day {
 
   private def sumMulInstructions(data: String, useConditionals: Boolean = false) =
     val results = (if useConditionals then combined else validMultInstruction).findAllIn(data)
-    var total = 0
+    var total   = 0
     var enabled = true
     // println(s"Found ${results.length} matches.")
     results.matchData.foreach(m =>
@@ -38,11 +38,11 @@ case object Day_3 extends Day {
             case Failure(exception) =>
               println(s"Couldn't perform ${m.toString()}")
             case Success(value) if enabled => total += value
-            case Success(_) => () 
+            case Success(_)                => ()
         case conditionals("don't()") if useConditionals =>
-            enabled = false
+          enabled = false
         case conditionals("do()") if useConditionals =>
-            enabled = true
+          enabled = true
         case _ => ()
     )
     total
@@ -52,12 +52,12 @@ case object Day_3 extends Day {
     println(total)
 
   override def part1: Unit =
-    val data = Utils.readDailyResourceIntoString(3)
+    val data  = Utils.readDailyResourceIntoString(3)
     val total = sumMulInstructions(data)
     println(total)
 
   override def part2: Unit =
-    val data = Utils.readDailyResourceIntoString(3)
+    val data  = Utils.readDailyResourceIntoString(3)
     val total = sumMulInstructions(data, true)
     println(total)
 

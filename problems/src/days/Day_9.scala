@@ -5,7 +5,7 @@ import model.Utils
 import scala.collection.mutable.ArrayBuffer
 import days.Day_9.Block.Empty
 
-case object Day_9 extends Day {
+object Day_9 extends Day {
 
   private val tinyExampleMap = "12345"
 

@@ -19,7 +19,8 @@ object Main {
     Day_10,
     Day_11,
     Day_12,
-    Day_13
+    Day_13,
+    Day_14
   )
 
   def main(args: Array[String]): Unit =

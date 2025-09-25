@@ -5,7 +5,7 @@ import scala.collection.mutable.Map
 import model.Utils
 import scala.collection.mutable.Queue
 
-case object Day_12 extends Day {
+object Day_12 extends Day {
 
   private val tinyExample = """AAAA
                               |BBCD

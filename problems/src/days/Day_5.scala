@@ -3,7 +3,7 @@ package days
 import model.Day
 import model.Utils
 
-case object Day_5 extends Day {
+object Day_5 extends Day {
 
   private def exampleData = """47|53
                               |97|13

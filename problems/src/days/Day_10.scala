@@ -6,7 +6,7 @@ import scala.util.Failure
 import scala.util.Success
 import model.Utils
 
-case object Day_10 extends Day {
+object Day_10 extends Day {
 
   private val exampleData = """0123
                               |1234
