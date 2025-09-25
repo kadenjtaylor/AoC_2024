@@ -1,6 +1,7 @@
 package days
 
 import model.Day
+import model.Utils
 
 /*
     Okay, I'm pretty sure what's going to happen here is that
@@ -120,4 +121,9 @@ object Day_14 extends Day {
     println(updated.render(true))
     println(s"Safety Factor after 100 seconds: ${updated.safetyFactor}")
 
+  override def part1: Unit =
+    val robots  = Robots.parse(Utils.readDailyResourceIntoString(14))
+    val env     = Environment(robots)
+    val updated = env.stateAfter(100)
+    println(s"Safety Factor after 100 seconds: ${updated.safetyFactor}")
 }
