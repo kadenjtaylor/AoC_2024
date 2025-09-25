@@ -21,8 +21,8 @@ case object Day_13 extends Day {
                               |Button B: X+27, Y+71
                               |Prize: X=18641, Y=10279""".stripMargin
 
-  case class Location(x: Int, y: Int)
-  case class Button(x: Int, y: Int, cost: Int)
+  case class Location(x: Long, y: Long)
+  case class Button(x: Long, y: Long, cost: Int)
 
   case class Machine(a: Button, b: Button, prize: Location) {
     def equations =
@@ -41,6 +41,44 @@ case object Day_13 extends Day {
         )
         .headOption
     }
+
+    private def printlnIfVerbose(s: String, verbose: Boolean = false) =
+      if verbose then println(s)
+
+    def smartSolve(): Option[Long] = {
+      printlnIfVerbose(s"Need to solve the following system of equations:")
+      printlnIfVerbose(equations)
+      printlnIfVerbose(s"First, solve the second equation for a.")
+      printlnIfVerbose(s"a = (${prize.y} - ${b.y}b) / ${a.y}")
+      printlnIfVerbose(s"Then, solve the first equation for b.")
+      printlnIfVerbose(s"b = (${prize.x} - ${a.x}a) / ${b.x}")
+      printlnIfVerbose(s"Then substitute the value of b in the equation solved for a.")
+      printlnIfVerbose(s"a = ${prize.y} - (${b.y} * ((${prize.x} - ${a.x}a) / ${b.x})) / ${a.y}")
+      printlnIfVerbose(s"Then re-solve for a.")
+      printlnIfVerbose(
+        s"a = [(${prize.y}*${b.x}) - (${prize.x}*${b.y})] / [(${b.x}*${a.y}) - (${b.y}*${a.x})]"
+      )
+      val answerA = ((prize.y * b.x) - (prize.x * b.y)) / ((b.x * a.y) - (b.y * a.x))
+      printlnIfVerbose(s"a = ${((prize.y * b.x) - (prize.x * b.y)) / ((b.x * a.y) - (b.y * a.x))}")
+      printlnIfVerbose(s"Then plug that back into the b equation to solve for b.")
+      printlnIfVerbose(s"b = (${prize.x} - ${a.x} * ${answerA}) / ${b.x}")
+      val answerB = (prize.x - (a.x * answerA)) / b.x
+      printlnIfVerbose(s"b = ${(prize.x - (a.x * answerA)) / b.x}")
+      printlnIfVerbose(s"Our numbers are: a = $answerA, b = $answerB")
+      val equation1Works = a.x * answerA + b.x * answerB == prize.x
+      if !equation1Works then printlnIfVerbose(s"${a.x * answerA + b.x * answerB} != ${prize.x}")
+      val equation2Works = a.y * answerA + b.y * answerB == prize.y
+      if !equation2Works then printlnIfVerbose(s"${a.y * answerA + b.y * answerB} != ${prize.y}")
+      val answerChecksOut = answerA > 0 && answerB > 0 && equation1Works && equation2Works
+      if answerChecksOut then
+        val tokens = answerA * a.cost + answerB * b.cost
+        printlnIfVerbose(s"Therefore our token cost is: $answerA * 3 + $answerB * 1 = $tokens")
+        Some(tokens)
+      else None
+    }
+
+    def adjust(amount: Long = 10000000000000L) =
+      Machine(a, b, Location(prize.x + amount, prize.y + amount))
   }
 
   object Parsing {
@@ -81,4 +119,12 @@ case object Day_13 extends Day {
     val machines = Parsing.parseData(Utils.readDailyResourceIntoString(13))
     val result   = machines.flatMap(m => m.dumbSolve()).sum
     println(s"Total Tokens Spent to win all prizes: $result")
+
+  override def part2: Unit =
+    val machines = Parsing
+      .parseData(Utils.readDailyResourceIntoString(13))
+      .map(m => m.adjust())
+    val result = machines.flatMap(m => m.smartSolve()).sum
+    println(s"Total Tokens Spent to win all prizes: $result")
+
 }
